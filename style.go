@@ -19,7 +19,7 @@ const (
 	cyan      = lipgloss.Color("51")
 )
 
-func printTable(rows [][]string) {
+func printTable(rows *[][]string) {
 	re := lipgloss.NewRenderer(os.Stdout)
 
 	var (
@@ -50,13 +50,13 @@ func printTable(rows [][]string) {
 
 			// Make the second column a little wider.
 			if col == 1 {
-				style = style.Width(90)
+				style = style.Width(85)
 			}
 
 			return style
 		}).
 		Headers("ALIAS", "COMMAND").
-		Rows(rows...)
+		Rows(*rows...)
 	fmt.Println(t)
 }
 
