@@ -1,20 +1,41 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
 
 func main() {
-	aliases := getAliases()
+	aliases, err := getAliases()
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
 	printAliases(aliases)
 }
 
-func getFishConfFile() *string {
+// return which shell the user is running.
+// only 3 shells are supported: bash, zsh, fish
+func getUserShell() (string, error) {
+	shell := os.Getenv("SHELL")
+
+	if strings.Contains(shell, "fish") {
+		return "fish", nil
+	} else if strings.Contains(shell, "bash") {
+		return "bash", nil
+	} else if strings.Contains(shell, "zsh") {
+		return "zsh", nil
+	}
+
+	return "", errors.New("Shell not found!")
+}
+
+func getConfigFile() *string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		panic(
+		log.Fatalln(
 			fmt.Sprintf(
 				"ERROR: couldn't get home dir.\nERROR MESSAGE: %s",
 				err.Error(),
@@ -22,9 +43,23 @@ func getFishConfFile() *string {
 		)
 	}
 
-	fileContent, err := os.ReadFile(home + "/.config/fish/config.fish")
+	shell, err := getUserShell()
 	if err != nil {
-		panic(
+		log.Fatalln(err.Error())
+	}
+
+	var fileContent []byte
+
+	if shell == "fish" {
+		fileContent, err = os.ReadFile(home + "/.config/fish/config.fish")
+	} else if shell == "bash" {
+		fileContent, err = os.ReadFile(home + "/.bashrc")
+	} else if shell == "zsh" {
+		fileContent, err = os.ReadFile(home + "/.zshrc")
+	}
+
+	if err != nil {
+		log.Fatalln(
 			fmt.Sprintf(
 				"ERROR: couldn't read config file content.\nERROR MESSAGE: %s",
 				err.Error(),
@@ -35,8 +70,8 @@ func getFishConfFile() *string {
 	return &strFileContent
 }
 
-func getAliases() []string {
-	fileContent := getFishConfFile()
+func getAliases() ([]string, error) {
+	fileContent := getConfigFile()
 
 	lines := strings.Split(*fileContent, "\n")
 	var aliases []string
@@ -50,12 +85,15 @@ func getAliases() []string {
 		}
 	}
 
-	return aliases
+	if len(aliases) == 0 {
+		return aliases, errors.New("no aliases found")
+	}
+
+	return aliases, nil
 }
 
-func printAliases(aliases []string) {
+func createFishAliasRows(aliases []string) *[][]string {
 	var rows [][]string
-
 	for _, alias := range aliases {
 		aliasWithoutTheWord := alias[6:]
 
@@ -83,6 +121,37 @@ func printAliases(aliases []string) {
 
 		aliasNameAndCommand[1] = highlightFishCode(aliasNameAndCommand[1])
 		rows = append(rows, aliasNameAndCommand)
+	}
+	return &rows
+}
+
+func createBashZshAliasRows(aliases []string) *[][]string {
+	var rows [][]string
+	for _, alias := range aliases {
+		aliasWithoutTheWord := alias[6:]
+
+		var aliasNameAndCommand []string
+		aliasNameAndCommand = strings.SplitN(aliasWithoutTheWord, "=", 2)
+
+		aliasNameAndCommand[1] = cleanAliasCommand(aliasNameAndCommand[1])
+
+		aliasNameAndCommand[1] = highlightFishCode(aliasNameAndCommand[1])
+		rows = append(rows, aliasNameAndCommand)
+	}
+	return &rows
+}
+
+func printAliases(aliases []string) {
+	shell, err := getUserShell()
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	var rows *[][]string
+	if shell == "fish" {
+		rows = createFishAliasRows(aliases)
+	} else {
+		rows = createBashZshAliasRows(aliases)
 	}
 
 	printTable(rows)
