@@ -4,7 +4,7 @@ set -e
 
 # Define the version and binary name
 VERSION="1.0.0"
-BINARY_NAME="print-aliases"
+BINARY_NAME="pretty-alias"
 DOWNLOAD_URL="https://github.com/yourusername/your-repo/releases/download/v$VERSION/$BINARY_NAME-linux-amd64"
 
 # Download the binary

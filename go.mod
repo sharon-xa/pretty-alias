@@ -1,4 +1,4 @@
-module github.com/sharon-xa/print-aliases
+module github.com/sharon-xa/pretty-alias
 
 go 1.22.5
 
