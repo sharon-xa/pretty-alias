@@ -30,7 +30,7 @@ echo "alias alias='pretty-alias'" >> ~/.bashrc
 ```bash
 echo "alias alias='pretty-alias'" >> ~/.zshrc
 ```
-2. fish
+3. fish
 ```bash
 echo "alias alias='pretty-alias'" >> ~/.config/fish/config.fish
 ```
