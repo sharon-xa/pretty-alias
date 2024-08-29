@@ -21,21 +21,6 @@ Run the executable:
 pretty-alias
 ```
 
-It's better to add this alias and use it instead of the default alias command
-1. Bash
-```bash
-echo "alias alias='pretty-alias'" >> ~/.bashrc
-```
-2. zsh
-```bash
-echo "alias alias='pretty-alias'" >> ~/.zshrc
-```
-3. fish
-```bash
-echo "alias alias='pretty-alias'" >> ~/.config/fish/config.fish
-```
-
-
 Use the following keys for navigation:
 - `q` or `ctrl+c`: Quit
 - `up`: Scroll up
