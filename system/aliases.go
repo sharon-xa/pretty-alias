@@ -1,4 +1,4 @@
-package main
+package system
 
 import (
 	"errors"
@@ -7,22 +7,6 @@ import (
 	"os"
 	"strings"
 )
-
-// return which shell the user is running.
-// only 3 shells are supported: bash, zsh, fish
-func getUserShell() (string, error) {
-	shell := os.Getenv("SHELL")
-
-	if strings.Contains(shell, "fish") {
-		return "fish", nil
-	} else if strings.Contains(shell, "bash") {
-		return "bash", nil
-	} else if strings.Contains(shell, "zsh") {
-		return "zsh", nil
-	}
-
-	return "", errors.New("Shell not found!")
-}
 
 func getConfigFile() *string {
 	home, err := os.UserHomeDir()
@@ -35,7 +19,7 @@ func getConfigFile() *string {
 		)
 	}
 
-	shell, err := getUserShell()
+	shell, err := GetUserShell()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -62,7 +46,7 @@ func getConfigFile() *string {
 	return &strFileContent
 }
 
-func getAliases() ([]string, error) {
+func GetAliases() ([]string, error) {
 	fileContent := getConfigFile()
 
 	lines := strings.Split(*fileContent, "\n")

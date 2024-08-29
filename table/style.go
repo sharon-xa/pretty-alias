@@ -1,4 +1,4 @@
-package main
+package table
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	purple    = lipgloss.Color("99")
-	gray      = lipgloss.Color("245")
-	lightGray = lipgloss.Color("241")
-	cyan      = lipgloss.Color("51")
+	Purple    = lipgloss.Color("99")
+	Gray      = lipgloss.Color("245")
+	LightGray = lipgloss.Color("241")
+	Cyan      = lipgloss.Color("51")
 )
 
-func highlightFishCode(code string) string {
+func highlightCommand(code string) string {
 	lexer := lexers.Get("fish")
 	if lexer == nil {
 		fmt.Println("No lexer found for Bash")
@@ -42,4 +42,16 @@ func highlightFishCode(code string) string {
 	}
 
 	return builder.String()
+}
+
+func cleanAliasCommand(command string) string {
+	if len(command) > 1 {
+		switch command[0] {
+		case '"', '\'':
+			if command[len(command)-1] == command[0] {
+				command = strings.Trim(command, string(command[0]))
+			}
+		}
+	}
+	return command
 }
