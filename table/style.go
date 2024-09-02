@@ -28,7 +28,7 @@ func highlightCommand(code string) string {
 		fmt.Println("No style found for Monokai")
 	}
 
-	formatter := formatters.TTY8
+	formatter := formatters.TTY256
 
 	iterator, err := lexer.Tokenise(nil, code)
 	if err != nil {
