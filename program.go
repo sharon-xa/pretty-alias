@@ -56,7 +56,7 @@ func (m *model) Init() tea.Cmd {
 	}
 
 	log.Println("Init called")
-	return tea.Batch(fetchAliases())
+	return fetchAliases()
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
