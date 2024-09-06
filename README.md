@@ -11,7 +11,7 @@ A CLI tool to display shell aliases with syntax highlighting, supporting `bash`,
 ## Installation
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh)"
+curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh | sudo sh
 ```
 
 ## Usage
