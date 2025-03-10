@@ -1,33 +1,34 @@
-package table
+package main
 
 import (
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
+	glossTable "github.com/charmbracelet/lipgloss/table"
+	"github.com/sharon-xa/pretty-alias/table"
 )
 
-func GetTable(rows *[][]string, width int, height int) *table.Table {
+func (m *model) GetTable() *glossTable.Table {
 	re := lipgloss.NewRenderer(os.Stdout)
 
 	var (
 		// HeaderStyle is the lipgloss style used for the table headers.
-		HeaderStyle = re.NewStyle().Foreground(Cyan).Bold(true).Align(lipgloss.Center)
+		HeaderStyle = re.NewStyle().Foreground(table.Cyan).Bold(true).Align(lipgloss.Center)
 		// CellStyle is the base lipgloss style used for the table rows.
 		CellStyle = re.NewStyle().Padding(0, 1)
 	)
 
-	t := table.New().
+	t := glossTable.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(Cyan)).Height(height).
+		BorderStyle(lipgloss.NewStyle().Foreground(table.Cyan)).Height(m.height).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			var style lipgloss.Style
 
 			switch {
-			case row == 0:
+			case row == glossTable.HeaderRow:
 				return HeaderStyle
-			case row%2 == 0:
-				style = CellStyle
+			// case row%2 == 0: // this is for even row style
+			// 	style = CellStyle
 			default:
 				style = CellStyle
 			}
@@ -36,14 +37,14 @@ func GetTable(rows *[][]string, width int, height int) *table.Table {
 				style = style.PaddingTop(1)
 			}
 
-			// second column
+			// second column (commands column)
 			if col == 1 {
-				style = style.Width(width - 20)
+				style = style.Width(m.width - 20)
 			}
 
 			return style
 		}).
 		Headers("ALIAS", "COMMAND").
-		Rows(*rows...)
+		Rows(m.rows...)
 	return t
 }

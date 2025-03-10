@@ -7,13 +7,14 @@ import (
 	"github.com/sharon-xa/pretty-alias/system"
 )
 
-func GetTableRows(aliases []string) *[][]string {
+func GetTableRows(aliases []string) [][]string {
+	log.Println("GetTableRows")
 	shell, err := system.GetUserShell()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
-	var rows *[][]string
+	var rows [][]string
 	if shell == "fish" {
 		rows = createFishAliasRows(aliases)
 	} else {
@@ -24,28 +25,28 @@ func GetTableRows(aliases []string) *[][]string {
 	return rows
 }
 
-func createFishAliasRows(aliases []string) *[][]string {
+func createFishAliasRows(aliases []string) [][]string {
 	var rows [][]string
 	for _, alias := range aliases {
 		aliasWithoutTheWord := alias[6:]
 
-		var aliasDeclerationType string
+		var aliasDeclerationType rune
 
 	findingTypeLoop:
 		for _, letter := range aliasWithoutTheWord {
 			if string(letter) == "=" {
-				aliasDeclerationType = "="
+				aliasDeclerationType = '='
 				break findingTypeLoop
 			} else if string(letter) == " " {
-				aliasDeclerationType = " "
+				aliasDeclerationType = ' '
 				break findingTypeLoop
 			}
 		}
 
 		var aliasNameAndCommand []string
-		if aliasDeclerationType == "=" {
+		if aliasDeclerationType == '=' {
 			aliasNameAndCommand = strings.SplitN(aliasWithoutTheWord, "=", 2)
-		} else if aliasDeclerationType == " " {
+		} else if aliasDeclerationType == ' ' {
 			aliasNameAndCommand = strings.SplitN(aliasWithoutTheWord, " ", 2)
 		}
 
@@ -55,10 +56,10 @@ func createFishAliasRows(aliases []string) *[][]string {
 		rows = append(rows, aliasNameAndCommand)
 	}
 	clear(aliases)
-	return &rows
+	return rows
 }
 
-func createBashZshAliasRows(aliases []string) *[][]string {
+func createBashZshAliasRows(aliases []string) [][]string {
 	var rows [][]string
 	for _, alias := range aliases {
 		// remove the word alias
@@ -74,5 +75,5 @@ func createBashZshAliasRows(aliases []string) *[][]string {
 		rows = append(rows, aliasNameAndCommand)
 	}
 	clear(aliases)
-	return &rows
+	return rows
 }

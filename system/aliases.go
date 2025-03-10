@@ -12,6 +12,7 @@ import (
 
 func readFile(file *os.File) ([]byte, error) {
 	buf := make([]byte, 1024)
+	defer clear(buf)
 	var output bytes.Buffer
 
 	for {
@@ -82,6 +83,7 @@ func GetAliases() ([]string, error) {
 	fileContent := getConfigFile()
 
 	lines := strings.Split(*fileContent, "\n")
+	defer clear(lines)
 	var aliases []string
 
 	for _, line := range lines {
