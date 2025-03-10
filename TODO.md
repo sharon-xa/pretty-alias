@@ -7,4 +7,4 @@
 - [ ] Create a way to categorize aliases:
     - You can create a syntax for pretty-alias to look for in aliases file.
     - Separate them visually when there is categories.
-- [ ] Resizing the terminal window is causing a crash.
+- [x] Resizing the terminal window is causing a crash.
