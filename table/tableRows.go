@@ -20,6 +20,7 @@ func GetTableRows(aliases []string) *[][]string {
 		rows = createBashZshAliasRows(aliases)
 	}
 
+	clear(aliases)
 	return rows
 }
 
@@ -53,6 +54,7 @@ func createFishAliasRows(aliases []string) *[][]string {
 		aliasNameAndCommand[1] = highlightCommand(aliasNameAndCommand[1])
 		rows = append(rows, aliasNameAndCommand)
 	}
+	clear(aliases)
 	return &rows
 }
 
@@ -71,5 +73,6 @@ func createBashZshAliasRows(aliases []string) *[][]string {
 		aliasNameAndCommand[1] = highlightCommand(aliasNameAndCommand[1])
 		rows = append(rows, aliasNameAndCommand)
 	}
+	clear(aliases)
 	return &rows
 }
