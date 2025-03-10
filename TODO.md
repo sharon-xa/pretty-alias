@@ -6,5 +6,5 @@
 - [ ] Fix not showing anything when there's no aliases.
 - [ ] Create a way to categorize aliases:
     - You can create a syntax for pretty-alias to look for in aliases file.
-    - Separate them visually when there is categories.
+    - Separate them visually when there are categories.
 - [x] Resizing the terminal window is causing a crash.
