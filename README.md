@@ -10,8 +10,15 @@ A CLI tool to display shell aliases with syntax highlighting, supporting `bash`,
 
 ## Installation
 
+#### Via bash script
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh | sudo sh
+```
+
+#### Via go install
+```bash
+go install github.com/sharon-xa/pretty-alias@latest
 ```
 
 ## Usage
