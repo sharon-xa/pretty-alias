@@ -1,12 +1,32 @@
 package system
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 )
+
+func readFile(file *os.File) ([]byte, error) {
+	buf := make([]byte, 1024)
+	var output bytes.Buffer
+
+	for {
+		n, err := file.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return []byte{}, err
+		}
+		output.Write(buf[:n])
+	}
+
+	return output.Bytes(), nil
+}
 
 func getConfigFile() *string {
 	home, err := os.UserHomeDir()
@@ -24,14 +44,14 @@ func getConfigFile() *string {
 		log.Fatalln(err.Error())
 	}
 
-	var fileContent []byte
+	var file *os.File
 
 	if shell == "fish" {
-		fileContent, err = os.ReadFile(home + "/.config/fish/config.fish")
+		file, err = os.Open(home + "/.config/fish/config.fish")
 	} else if shell == "bash" {
-		fileContent, err = os.ReadFile(home + "/.bashrc")
+		file, err = os.Open(home + "/.bashrc")
 	} else if shell == "zsh" {
-		fileContent, err = os.ReadFile(home + "/.zshrc")
+		file, err = os.Open(home + "/.zshrc")
 	}
 
 	if err != nil {
@@ -42,8 +62,20 @@ func getConfigFile() *string {
 			),
 		)
 	}
-	strFileContent := string(fileContent)
-	return &strFileContent
+	defer file.Close()
+
+	content, err := readFile(file)
+	if err != nil {
+		log.Fatalln(
+			fmt.Sprintf(
+				"ERROR: couldn't read config file content.\nERROR MESSAGE: %s",
+				err.Error(),
+			),
+		)
+	}
+	str := string(content)
+	clear(content)
+	return &str
 }
 
 func GetAliases() ([]string, error) {
@@ -53,7 +85,7 @@ func GetAliases() ([]string, error) {
 	var aliases []string
 
 	for _, line := range lines {
-		if len(line) < 10 {
+		if line == "" || line[0] != 'a' {
 			continue
 		}
 		if line[:5] == "alias" {
