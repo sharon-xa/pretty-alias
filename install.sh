@@ -3,7 +3,7 @@
 set -e
 
 # Define the version and binary name
-VERSION="1.1.2"
+VERSION="1.2.0"
 BINARY_NAME="pretty-alias"
 # DOWNLOAD_URL="https://github.com/sharon-xa/pretty-alias/releases/download/v$VERSION/$BINARY_NAME-linux-amd64"
 DOWNLOAD_URL="https://github.com/sharon-xa/pretty-alias/releases/download/v$VERSION/$BINARY_NAME"
