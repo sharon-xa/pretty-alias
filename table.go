@@ -33,7 +33,7 @@ func (m *model) GetTable() *glossTable.Table {
 				style = CellStyle
 			}
 
-			if row > 1 {
+			if row > 0 {
 				style = style.PaddingTop(1)
 			}
 
