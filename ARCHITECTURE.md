@@ -61,6 +61,7 @@ app ──► tui ──► highlight ──► shell
 - `internal/alias`: table tests for every parsing rule, plus every fixture in `testdata/` with its expected row count, plus a panic fuzz over truncations of tricky lines.
 - `internal/tui`: drives `Update`/`View` directly with synthetic messages, including the resize-while-scrolled regression and hostile content.
 - `internal/app`: runs the whole program (flags → file → output) with `--plain`; includes "every fixture runs without crashing".
+- `install_test.go` (repo root) runs the real `install.sh` against a local fake release server: verified install, 404, checksum mismatch, missing checksums, an HTML error page, atomic re-install, and the legacy single-asset release.
 - `just smoke` runs the real binary in a pty over every fixture.
 - Regenerate big fixtures with `just fixtures`; they are deterministic.
 
@@ -71,4 +72,5 @@ app ──► tui ──► highlight ──► shell
 - **No `.env`/`godotenv`.** Configuration is the real environment plus flags. The debug log goes to the user cache dir, never the working directory.
 - **Mouse is not captured**, so you can select and copy text with the terminal as usual. Revisit if/when row selection (#28) lands.
 - **Highlighting is done once, up front** (`tui.New`). That costs ~0.3 s for 2000 aliases and ~0.03 s for a typical 200. If this ever matters, highlight lazily for the visible rows.
+- **Release asset contract** (what `install.sh` expects): each release publishes `pretty-alias-<os>-<arch>` for `linux`/`darwin` × `amd64`/`arm64`, plus a `checksums.txt` in `sha256sum` format (`<hash>  <filename>`). `just dist` produces exactly this; the future GoReleaser setup (#23) must keep the same names. The one exception is the legacy v1.2.1 release (a bare `pretty-alias` Linux amd64 binary with no checksums), which the installer still accepts with a warning.
 - **`go` directive follows the latest release** (see `go.mod`); `just upgrade` bumps dependencies.

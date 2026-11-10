@@ -147,7 +147,7 @@ dist:
       GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -trimpath -ldflags "-s -w {{ldflags}}" \
         -o "dist/{{bin}}-$os-$arch" .
     done
-    (cd dist && sha256sum {{bin}}-* > checksums.txt)
+    (cd dist && { sha256sum {{bin}}-* 2>/dev/null || shasum -a 256 {{bin}}-*; } > checksums.txt)
 
 # remove build artifacts
 clean:
