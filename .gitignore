@@ -1,2 +1,8 @@
-pretty-alias
+# build output
+/pretty-alias
+/dist/
+coverage.out
+
+# local-only
 *.log
+.env

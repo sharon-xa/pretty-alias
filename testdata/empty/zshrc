@@ -1,0 +1,5 @@
+# ~/.zshrc with no aliases at all
+autoload -Uz compinit && compinit
+setopt AUTO_CD
+export EDITOR=vim
+# alias commented='ls'    <- commented out, must not count

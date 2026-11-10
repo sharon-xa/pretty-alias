@@ -1,0 +1,3 @@
+alias from_zshrc='echo defined in .zshrc'
+[[ -f ~/.zsh_aliases ]] && source ~/.zsh_aliases
+for f in ~/.zshrc.d/*.zsh(N); do source "$f"; done

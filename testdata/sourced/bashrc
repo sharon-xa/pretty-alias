@@ -1,0 +1,10 @@
+# ~/.bashrc that pulls aliases from other files (issue #2, #31).
+alias from_bashrc='echo defined in .bashrc'
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+[ -f "$HOME/.config/aliases/work.sh" ] && source "$HOME/.config/aliases/work.sh"
+source ~/.config/aliases/missing-file.sh          # does not exist: must not crash
+. /etc/profile.d/does-not-exist.sh                # absolute and missing
+source "$HOME/.config/aliases/self-include.sh"    # includes itself: recursion guard

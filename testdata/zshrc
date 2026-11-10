@@ -1,0 +1,197 @@
+# ~/.zshrc  (pretty-alias fixture: realistic, diverse, valid for the current parser)
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+plugins=(git docker kubectl fzf zsh-autosuggestions zsh-syntax-highlighting)
+source $ZSH/oh-my-zsh.sh
+
+autoload -Uz compinit && compinit
+autoload -Uz vcs_info
+setopt AUTO_CD HIST_IGNORE_DUPS SHARE_HISTORY EXTENDED_GLOB INTERACTIVE_COMMENTS
+bindkey -e
+bindkey '^[[A' history-search-backward
+bindkey '^[[B' history-search-forward
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+
+export EDITOR="nvim"
+export VISUAL="$EDITOR"
+export LESS="-R --use-color"
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+typeset -U path
+path=("$HOME/.local/bin" "$HOME/.cargo/bin" $path)
+
+eval "$(zoxide init zsh)"
+eval "$(starship init zsh)"
+
+# ------------------------------------------------------------ zoxide / fzf
+alias z='zoxide'
+alias zi='zoxide query -i'
+alias fcd='cd "$(fd --type d | fzf)"'
+alias fe='nvim "$(fzf --preview "bat --color=always {}")"'
+alias fkill='ps -ef | fzf | awk "{print \$2}" | xargs kill -9'
+alias fgb='git branch --all | fzf | xargs git checkout'
+alias fh='history 1 | fzf --tac | sed "s/^ *[0-9]* *//"'
+
+# ------------------------------------------------------------ listing
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -lah --icons --git'
+alias lt='eza --tree --level=2 --icons'
+alias lta='eza --tree --level=3 --icons -a --ignore-glob=".git|node_modules"'
+alias cat='bat --style=plain'
+alias catn='bat --style=numbers,changes'
+alias diff='delta'
+alias top='btop'
+alias du='dust'
+alias df='duf'
+alias ps='procs'
+alias sed='sd'
+alias find='fd'
+alias grep='rg'
+alias help='tldr'
+alias man='batman'
+
+# ------------------------------------------------------------ git
+alias gst='git status'
+alias gaa='git add --all'
+alias gcmsg='git commit --message'
+alias gcam='git commit --all --message'
+alias gcf='git commit --fixup'
+alias gsw='git switch'
+alias gswc='git switch --create'
+alias grs='git restore'
+alias grss='git restore --staged'
+alias gbl='git blame -w -C -C -C'
+alias glg='git log --stat'
+alias glgg='git log --graph --max-count=20'
+alias gdt='git difftool'
+alias grb='git rebase'
+alias grbi='git rebase -i'
+alias grbc='git rebase --continue'
+alias grba='git rebase --abort'
+alias gcp='git cherry-pick'
+alias gm='git merge --no-ff'
+alias gtag='git tag -a'
+alias gbsb='git bisect start && git bisect bad && git bisect good'
+alias gwt='git worktree'
+alias gwta='git worktree add'
+alias gsub='git submodule update --init --recursive'
+alias lg='lazygit'
+alias gh-pr='gh pr create --fill --web'
+alias gh-co='gh pr checkout'
+alias gh-ci='gh run watch'
+alias ghv='gh repo view --web'
+
+# ------------------------------------------------------------ containers / cloud
+alias dps='docker ps --format "{{.Names}}: {{.Status}}"'
+alias dstop='docker stop $(docker ps -q)'
+alias dsh='docker run --rm -it --entrypoint /bin/sh'
+alias dbuild='docker buildx build --load -t'
+alias dcr='docker compose run --rm'
+alias dcrb='docker compose up -d --build --force-recreate'
+alias kx='kubectx'
+alias kn='kubens'
+alias kgpa='kubectl get pods -A'
+alias kgs='kubectl get svc'
+alias kgi='kubectl get ingress'
+alias kdel='kubectl delete'
+alias kpf='kubectl port-forward'
+alias kex='kubectl exec -it'
+alias ktop='kubectl top pods --containers'
+alias h-ls='helm list -A'
+alias h-up='helm upgrade --install --atomic --timeout 5m'
+alias awswho='aws sts get-caller-identity --output table'
+alias awsp='export AWS_PROFILE=$(aws configure list-profiles | fzf)'
+alias gcp-p='gcloud config set project'
+alias tfa='terraform apply tfplan'
+alias tfi='terraform init -upgrade'
+alias tfv='terraform validate && terraform fmt -check -recursive'
+
+# ------------------------------------------------------------ editing / dotfiles
+alias zshrc='${EDITOR} ~/.zshrc'
+alias zshreload='source ~/.zshrc && echo "zsh reloaded"'
+alias nvimrc='cd ~/.config/nvim && nvim init.lua'
+alias dots='git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+alias dotsa='dots add -u && dots commit -m "update" && dots push'
+alias hosts='sudo $EDITOR /etc/hosts'
+alias tmuxconf='$EDITOR ~/.tmux.conf'
+alias sshconf='$EDITOR ~/.ssh/config'
+
+# ------------------------------------------------------------ dev
+alias pn='pnpm'
+alias pni='pnpm install'
+alias pnd='pnpm dev'
+alias pnb='pnpm build'
+alias pnt='pnpm test --watch'
+alias npx='pnpm dlx'
+alias bunx='bun x'
+alias uvr='uv run'
+alias uvs='uv sync'
+alias pyt='pytest -xvs --tb=short'
+alias ruffa='ruff check --fix . && ruff format .'
+alias mypyc='mypy --strict .'
+alias jn='jupyter lab --no-browser'
+alias gor='go run .'
+alias gotw='gotestsum --watch'
+alias golint='golangci-lint run ./...'
+alias cw='cargo watch -x check -x test'
+alias cfmt='cargo fmt --all -- --check'
+alias cdoc='cargo doc --open --no-deps'
+alias zigb='zig build -Doptimize=ReleaseFast'
+alias mk='make -j$(nproc) -s'
+alias cmk='cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j'
+alias js='node --watch'
+alias ts='tsx watch'
+alias lintall='eslint . --fix && prettier --write .'
+alias sqlite='sqlite3 -header -column'
+alias redis='redis-cli -h localhost -p 6379'
+alias pg='psql postgresql://postgres:postgres@localhost:5432/postgres'
+alias mongo='mongosh "mongodb://localhost:27017"'
+
+# ------------------------------------------------------------ system
+alias sysu='systemctl --user'
+alias sysr='sudo systemctl restart'
+alias syss='systemctl status --no-pager'
+alias jlog='journalctl --since "1 hour ago" -p err'
+alias dmesgw='sudo dmesg -w -T'
+alias biglogs='sudo du -sh /var/log/* 2>/dev/null | sort -rh | head'
+alias listening='sudo lsof -iTCP -sTCP:LISTEN -n -P'
+alias killport='fuser -k'
+alias flushdns='sudo resolvectl flush-caches'
+alias wifi='nmcli device wifi list'
+alias vpn='nmcli connection up'
+alias bt='bluetoothctl'
+alias vol='wpctl set-volume @DEFAULT_AUDIO_SINK@'
+alias mute='wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle'
+alias bright='brightnessctl set'
+alias screenshot='grim -g "$(slurp)" - | wl-copy'
+alias cb='wl-copy'
+alias cbp='wl-paste'
+alias o='xdg-open'
+alias 'open'='xdg-open'
+alias trash='gio trash'
+alias mirrors='sudo reflector --country DE,NL --latest 20 --sort rate --save /etc/pacman.d/mirrorlist'
+alias orphans='pacman -Qtdq | sudo pacman -Rns -'
+alias paccache='sudo paccache -rk2'
+
+# ------------------------------------------------------------ misc
+alias week='date +%V'
+alias unixtime='date +%s'
+alias utc='date -u +"%Y-%m-%dT%H:%M:%SZ"'
+alias uuid='python3 -c "import uuid; print(uuid.uuid4())"'
+alias rand='openssl rand -hex 16'
+alias b64='base64 -w0'
+alias urlenc='python3 -c "import sys,urllib.parse as u; print(u.quote(sys.stdin.read().strip()))"'
+alias csvp='column -s, -t | less -S'
+alias count='sort | uniq -c | sort -rn'
+alias lines='wc -l'
+alias dedupe='awk "!seen[\$0]++"'
+alias hr='printf "%*s\n" "${COLUMNS:-80}" "" | tr " " "-"'
+alias emoji='echo "🚀 ✨ 🔥 🧪 🐛 ✅ ❌"'
+alias cjk='echo "日本語のテスト 中文测试 한국어 테스트"'
+alias accents='echo "café naïve résumé Zürich"'
+alias nested='echo "outer $(echo "inner $(echo deepest)")"'
+alias envprefix='LC_ALL=C TZ=UTC sort'
+alias redir='ls /nonexistent 2>/dev/null >/dev/null || echo failed'
+alias andor='true && echo yes || echo no'
+alias brace='echo {a,b,c}{1,2,3}'
+alias heredoc='cat <<< "here-string"'

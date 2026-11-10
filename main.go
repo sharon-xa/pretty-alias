@@ -1,36 +1,19 @@
+// Command pretty-alias shows the aliases from your shell config in a
+// scrollable, syntax-highlighted table. All the logic lives in internal/.
+//
+// This file stays in the module root (not cmd/) so that
+// `go install github.com/sharon-xa/pretty-alias@latest` keeps working.
 package main
 
 import (
-	"fmt"
-	"io"
-	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/joho/godotenv"
+	"github.com/sharon-xa/pretty-alias/internal/app"
 )
 
+// version is set at build time: go build -ldflags "-X main.version=v1.2.3"
+var version = "dev"
+
 func main() {
-	godotenv.Load(".env")
-
-	if os.Getenv("PRETTY_ALIAS_DEBUG") == "" {
-		log.SetOutput(io.Discard) // Disable logging by default
-	} else {
-
-		logFile, err := os.OpenFile("debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalln("Failed to open log file:", err)
-		}
-
-		log.SetOutput(logFile)
-		defer logFile.Close()
-
-		log.Println("Program started")
-	}
-
-	p := tea.NewProgram(&model{}, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	os.Exit(app.Run(os.Args[1:], os.Stdout, os.Stderr, version))
 }

@@ -1,0 +1,10 @@
+# ~/.bashrc with no aliases at all
+export EDITOR=vim
+export PATH="$HOME/.local/bin:$PATH"
+PS1='\u@\h:\w\$ '
+HISTSIZE=1000
+
+mkcd() { mkdir -p "$1" && cd "$1"; }
+# alias commented='ls'    <- commented out, must not count
+#alias hidden='ls'
+echo "unalias foo" >/dev/null
