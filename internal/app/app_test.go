@@ -184,12 +184,21 @@ func TestDebugLogGoesToCacheDirNotCWD(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chdir(old) })
 
 	file, _ := filepath.Abs(filepath.Join(old, testdata, "minimal/bashrc"))
-	code, _, errs := run(t, map[string]string{"PRETTY_ALIAS_DEBUG": "1", "XDG_CACHE_HOME": cache},
+	// Linux honours XDG_CACHE_HOME; macOS uses $HOME/Library/Caches. Point both
+	// at the temp dir and ask the app where it will write.
+	code, _, errs := run(t, map[string]string{"PRETTY_ALIAS_DEBUG": "1", "XDG_CACHE_HOME": cache, "HOME": cache},
 		"--shell", "bash", "--file", file)
 	if code != ExitOK {
 		t.Fatalf("exit %d: %s", code, errs)
 	}
-	b, err := os.ReadFile(filepath.Join(cache, "pretty-alias", "debug.log"))
+	logPath, err := LogPath() // env set by run() is still in effect
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(logPath, cache) {
+		t.Fatalf("log path %q is outside the test cache dir %q", logPath, cache)
+	}
+	b, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("log not written to cache dir: %v", err)
 	}

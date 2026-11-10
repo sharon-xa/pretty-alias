@@ -16,13 +16,13 @@ build:
 run:
     go run .
 
-# run with debug logging (log: $XDG_CACHE_HOME/pretty-alias/debug.log, never the CWD)
+# run with debug logging (log goes to the user cache dir, never the CWD; see `just logs`)
 debug:
     PRETTY_ALIAS_DEBUG=1 go run .
 
 # follow the debug log (run `just debug` in another terminal)
 logs:
-    tail -f "${XDG_CACHE_HOME:-$HOME/.cache}/pretty-alias/debug.log"
+    tail -f "$( [ "$(uname)" = Darwin ] && echo "$HOME/Library/Caches" || echo "${XDG_CACHE_HOME:-$HOME/.cache}" )/pretty-alias/debug.log"
 
 # print the parsed aliases (no TUI) for a fixture or any file
 #   just plain testdata/zshrc zsh

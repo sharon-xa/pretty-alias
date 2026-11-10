@@ -8,7 +8,8 @@ import (
 )
 
 // LogPath is where the debug log is written when PRETTY_ALIAS_DEBUG is set:
-// <user cache dir>/pretty-alias/debug.log (on Linux, ~/.cache/pretty-alias/).
+// <user cache dir>/pretty-alias/debug.log (Linux: $XDG_CACHE_HOME or ~/.cache;
+// macOS: ~/Library/Caches).
 // It is never written into the current directory.
 func LogPath() (string, error) {
 	dir, err := os.UserCacheDir()

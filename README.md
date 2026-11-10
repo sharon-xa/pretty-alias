@@ -58,7 +58,7 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 |---|---|
 | `SHELL` | Used to detect the shell when `--shell` is not given. |
 | `NO_COLOR` | Disable syntax highlighting. |
-| `PRETTY_ALIAS_DEBUG` | If set, write a debug log to `$XDG_CACHE_HOME/pretty-alias/debug.log` (`~/.cache/pretty-alias/debug.log` on Linux). Never written to the current directory. |
+| `PRETTY_ALIAS_DEBUG` | If set, write a debug log to `pretty-alias/debug.log` inside your user cache directory: `$XDG_CACHE_HOME` or `~/.cache` on Linux, `~/Library/Caches` on macOS. Never written to the current directory. |
 
 ### Current limitations
 

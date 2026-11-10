@@ -49,8 +49,8 @@ func Run(args []string, stdout, stderr io.Writer, version string) int {
 Environment:
   SHELL                Used to detect the shell when --shell is not given.
   NO_COLOR             Disable syntax highlighting.
-  PRETTY_ALIAS_DEBUG   If set, write a debug log to the user cache dir
-                       (see --help in the README for the exact path).
+  PRETTY_ALIAS_DEBUG   If set, write a debug log to pretty-alias/debug.log in
+                       your user cache dir (~/.cache or ~/Library/Caches).
 
 Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 `)
