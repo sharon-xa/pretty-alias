@@ -1,0 +1,2 @@
+alias from_zsh_aliases='echo defined in .zsh_aliases'
+alias -g L='| less'

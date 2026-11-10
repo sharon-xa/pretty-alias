@@ -1,0 +1,214 @@
+# ~/.bashrc  (pretty-alias fixture: realistic, diverse, valid for the current parser)
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+export EDITOR=nvim
+export PAGER=less
+export HISTSIZE=50000
+export PATH="$HOME/.local/bin:$HOME/go/bin:$HOME/.cargo/bin:$PATH"
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# ---------------------------------------------------------------- navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias ~='cd ~'
+alias cdp='cd ~/Projects'
+alias cdd='cd ~/Downloads'
+alias cdc='cd ~/.config'
+alias cdt='cd /tmp'
+alias mkcd='mkdir -p'
+
+# ---------------------------------------------------------------- listing
+alias ls='ls --color=auto'
+alias ll='ls -alFh'
+alias la='ls -A'
+alias l='ls -CF'
+alias lt='ls -lhtr'
+alias lS='ls -lhSr'
+alias lsd='ls -d */'
+alias tree1='tree -L 1'
+alias tree2='tree -L 2 -I "node_modules|.git|target"'
+alias eza='eza --icons --group-directories-first'
+alias lx='eza -la --git --header'
+
+# ---------------------------------------------------------------- safety nets
+alias rm='rm -I --preserve-root'
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias ln='ln -i'
+alias chown='chown --preserve-root'
+alias chmod='chmod --preserve-root'
+alias mkdir='mkdir -pv'
+
+# ---------------------------------------------------------------- grep & friends
+alias grep='grep --color=auto'
+alias egrep='grep -E --color=auto'
+alias fgrep='grep -F --color=auto'
+alias rgi='rg --smart-case --hidden --glob "!.git"'
+alias todo='rg -n "TODO|FIXME|HACK|XXX"'
+alias findf='find . -type f -name'
+alias findd='find . -type d -name'
+alias biggest='du -ah . | sort -rh | head -n 20'
+alias dud='du -h --max-depth=1 | sort -hr'
+alias dfh='df -hT | grep -v tmpfs'
+
+# ---------------------------------------------------------------- git
+alias g='git'
+alias gs='git status -sb'
+alias ga='git add'
+alias gaa='git add --all'
+alias gap='git add --patch'
+alias gc='git commit -v'
+alias gcm='git commit -m'
+alias gca='git commit --amend --no-edit'
+alias gco='git checkout'
+alias gcb='git checkout -b'
+alias gb='git branch -vv'
+alias gbd='git branch -d'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gl='git log --oneline --graph --decorate -n 20'
+alias gla='git log --oneline --graph --decorate --all'
+alias glp='git log --pretty=format:"%C(yellow)%h%Creset %s %C(green)(%cr)%Creset %C(blue)<%an>%Creset"'
+alias gp='git push'
+alias gpf='git push --force-with-lease'
+alias gpl='git pull --rebase --autostash'
+alias gf='git fetch --all --prune'
+alias gst='git stash push -u'
+alias gstp='git stash pop'
+alias grh='git reset --hard HEAD'
+alias gclean='git clean -fdx -e .env'
+alias gundo='git reset --soft HEAD~1'
+alias gwho='git shortlog -sn --no-merges'
+alias groot='cd "$(git rev-parse --show-toplevel)"'
+alias gbr='git for-each-ref --sort=-committerdate refs/heads --format="%(refname:short) %(committerdate:relative)"'
+
+# ---------------------------------------------------------------- docker / k8s
+alias d='docker'
+alias dps='docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"'
+alias dpa='docker ps -a'
+alias di='docker images'
+alias dex='docker exec -it'
+alias dlogs='docker logs -f --tail 100'
+alias dprune='docker system prune -af --volumes'
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcl='docker compose logs -f --tail=100'
+alias drm='docker rm -f $(docker ps -aq)'
+alias k='kubectl'
+alias kg='kubectl get'
+alias kgp='kubectl get pods -o wide'
+alias kd='kubectl describe'
+alias kl='kubectl logs -f --tail=200'
+alias kctx='kubectl config current-context'
+alias kns='kubectl config set-context --current --namespace'
+alias kall='kubectl get all --all-namespaces'
+alias tf='terraform'
+alias tfp='terraform plan -out=tfplan'
+
+# ---------------------------------------------------------------- system
+alias sc='sudo systemctl'
+alias scu='systemctl --user'
+alias jc='journalctl -xe'
+alias jcf='journalctl -f -u'
+alias please='sudo $(fc -ln -1)'
+alias reload='source ~/.bashrc && echo "reloaded"'
+alias path='echo -e ${PATH//:/\\n}'
+alias now='date +"%Y-%m-%d %H:%M:%S"'
+alias week='date +%V'
+alias ports='ss -tulpn'
+alias myip='curl -s https://ifconfig.me && echo'
+alias lanip="ip -4 -o addr show scope global | awk '{print \$4}'"
+alias psg='ps aux | grep -v grep | grep -i'
+alias top10='ps aux --sort=-%mem | head -n 11'
+alias meminfo='free -m -l -t'
+alias cpuinfo='lscpu | grep -E "Model name|Socket|Core|Thread|MHz"'
+alias temp='sensors | grep -E "Core|Package"'
+alias cls='clear'
+alias h='history | tail -n 50'
+alias hg='history | grep'
+
+# ---------------------------------------------------------------- packages
+alias update='sudo apt update && sudo apt upgrade -y'
+alias install='sudo apt install'
+alias search='apt search'
+alias autoremove='sudo apt autoremove --purge -y'
+alias pacu='sudo pacman -Syu'
+alias pacs='pacman -Ss'
+alias pacr='sudo pacman -Rns'
+alias yayu='yay -Sua --noconfirm'
+
+# ---------------------------------------------------------------- dev
+alias gob='go build ./...'
+alias got='go test -race -count=1 ./...'
+alias gov='go vet ./... && staticcheck ./...'
+alias gomt='go mod tidy && go mod verify'
+alias cb='cargo build'
+alias cr='cargo run --release'
+alias ct='cargo test -- --nocapture'
+alias cclippy='cargo clippy --all-targets -- -D warnings'
+alias ni='npm install'
+alias nr='npm run'
+alias nrd='npm run dev'
+alias pn='pnpm'
+alias py='python3'
+alias pip='python3 -m pip'
+alias venv='python3 -m venv .venv && source .venv/bin/activate'
+alias va='source .venv/bin/activate'
+alias serve='python3 -m http.server 8000'
+alias json='python3 -m json.tool'
+alias jqc='jq -C . | less -R'
+alias vim='nvim'
+alias vi='nvim'
+alias v='nvim .'
+alias c='code .'
+alias m='make'
+alias mj='make -j$(nproc)'
+
+# ---------------------------------------------------------------- misc / fun
+alias weather='curl -s "wttr.in/?format=3"'
+alias cheat='curl -s cheat.sh/'
+alias gpgs='gpg --list-secret-keys --keyid-format=long'
+alias sshk='ssh-add -l'
+alias sshp='ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no'
+alias tm='tmux new-session -A -s main'
+alias tml='tmux list-sessions'
+alias bat='batcat --paging=never'
+alias copy='xclip -selection clipboard'
+alias paste='xclip -selection clipboard -o'
+alias extract='tar -xvf'
+alias targz='tar -czvf'
+alias rsyncp='rsync -avh --progress --partial'
+alias wget='wget -c'
+alias ping5='ping -c 5'
+alias speedtest='curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python3 -'
+alias party='echo "🎉🎉🎉 party time 🎉🎉🎉"'
+alias ok='echo "✅ done" || echo "❌ failed"'
+alias env_demo='FOO=bar BAZ="a=b" env | grep -E "^(FOO|BAZ)="'
+alias backticks='echo `date` is today'
+alias tabs='printf "a\tb\tc\n"'
+alias semicolons='cd /tmp; ls; cd -'
+alias longcmd='find . -type f \( -name "*.go" -o -name "*.rs" -o -name "*.py" -o -name "*.ts" -o -name "*.js" \) -not -path "*/node_modules/*" -not -path "*/target/*" -not -path "*/.git/*" -not -path "*/vendor/*" -print0 | xargs -0 wc -l | sort -rn | head -n 25'
+alias unquoted=ls
+alias empty_ish=true
+
+unalias ll 2>/dev/null
+alias ll='ls -alFh --group-directories-first'
+
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+# enable programmable completion features
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  fi
+fi
