@@ -11,11 +11,22 @@ A small CLI that shows your shell aliases in a scrollable, syntax-highlighted ta
 
 ## Installation
 
-#### Via bash script
+#### Via install script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh | sudo sh
+curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh | sh
 ```
+
+The script detects your OS (Linux, macOS) and CPU (amd64, arm64), downloads the matching release binary to a temporary directory, verifies it against the release's `checksums.txt`, checks that it really is an executable, and only then installs it. It installs to `/usr/local/bin` when run as root (use `| sudo sh` for a system-wide install) or when that directory is writable, otherwise to `~/.local/bin`, and never runs the downloaded binary.
+
+| Variable | Effect |
+|---|---|
+| `PRETTY_ALIAS_VERSION` | Install a specific release, e.g. `v1.2.1` (default: the latest) |
+| `INSTALL_DIR` | Install somewhere else, e.g. `INSTALL_DIR=$HOME/bin` |
+
+For example: `curl -fsSL …/install.sh | INSTALL_DIR=$HOME/bin PRETTY_ALIAS_VERSION=v1.2.1 sh` (put the variables on the `sh` side of the pipe). If you'd rather not pipe to a shell, download `install.sh`, read it, and run it.
+
+Releases up to v1.2.1 only published a Linux amd64 binary without checksums; the script still installs it, with a warning that it could not be verified. Newer releases must ship per-platform binaries and a `checksums.txt` (see `ARCHITECTURE.md`), and the script refuses to install a release that doesn't.
 
 #### Via go install
 
