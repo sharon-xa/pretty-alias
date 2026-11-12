@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/colorprofile"
-	"github.com/sharon-xa/pretty-alias/internal/shell"
+	"github.com/sharon-xa/pretty-alias/v2/internal/shell"
 )
 
 func TestSanitize(t *testing.T) {

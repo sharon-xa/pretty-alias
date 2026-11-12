@@ -2,13 +2,13 @@
 // scrollable, syntax-highlighted table. All the logic lives in internal/.
 //
 // This file stays in the module root (not cmd/) so that
-// `go install github.com/sharon-xa/pretty-alias@latest` keeps working.
+// `go install github.com/sharon-xa/pretty-alias/v2@latest` keeps working.
 package main
 
 import (
 	"os"
 
-	"github.com/sharon-xa/pretty-alias/internal/app"
+	"github.com/sharon-xa/pretty-alias/v2/internal/app"
 )
 
 // version is set at build time: go build -ldflags "-X main.version=v1.2.3"

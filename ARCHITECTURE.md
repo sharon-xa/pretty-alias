@@ -4,7 +4,7 @@
 
 ```
 main.go                     thin: os.Exit(app.Run(...)). Lives in the module root so that
-                            `go install github.com/sharon-xa/pretty-alias@latest` works.
+                            `go install github.com/sharon-xa/pretty-alias/v2@latest` works.
 internal/
   app/        composition root: flags, wiring, exit codes, logging, plain output
   shell/      Shell type (bash|zsh|fish), detection from $SHELL, rc-file paths

@@ -18,7 +18,7 @@ set -eu
 
 BIN="pretty-alias"
 BASE_URL="${PRETTY_ALIAS_BASE_URL:-https://github.com/sharon-xa/pretty-alias/releases}"
-GO_HINT="or build from source with: go install github.com/sharon-xa/pretty-alias@latest"
+GO_HINT="or build from source with: go install github.com/sharon-xa/pretty-alias/v2@latest"
 
 say() { printf '%s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }

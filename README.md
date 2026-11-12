@@ -31,8 +31,10 @@ Releases up to v1.2.1 only published a Linux amd64 binary without checksums; the
 #### Via go install
 
 ```bash
-go install github.com/sharon-xa/pretty-alias@latest
+go install github.com/sharon-xa/pretty-alias/v2@latest
 ```
+
+The installed command is still `pretty-alias`. Note the `/v2`: the old path without it (`github.com/sharon-xa/pretty-alias@latest`) stays on v1.2.1.
 
 ## Usage
 

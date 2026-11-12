@@ -1,4 +1,4 @@
-module github.com/sharon-xa/pretty-alias
+module github.com/sharon-xa/pretty-alias/v2
 
 go 1.27.3
 

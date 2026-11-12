@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sharon-xa/pretty-alias/internal/shell"
+	"github.com/sharon-xa/pretty-alias/v2/internal/shell"
 )
 
 // Parse extracts alias definitions from the text of a shell config file.

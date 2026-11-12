@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sharon-xa/pretty-alias/internal/shell"
+	"github.com/sharon-xa/pretty-alias/v2/internal/shell"
 )
 
 // pairs renders aliases as "name=command" for compact comparisons.

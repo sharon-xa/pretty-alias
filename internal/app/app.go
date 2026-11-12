@@ -16,10 +16,10 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/mattn/go-isatty"
 
-	"github.com/sharon-xa/pretty-alias/internal/alias"
-	"github.com/sharon-xa/pretty-alias/internal/highlight"
-	"github.com/sharon-xa/pretty-alias/internal/shell"
-	"github.com/sharon-xa/pretty-alias/internal/tui"
+	"github.com/sharon-xa/pretty-alias/v2/internal/alias"
+	"github.com/sharon-xa/pretty-alias/v2/internal/highlight"
+	"github.com/sharon-xa/pretty-alias/v2/internal/shell"
+	"github.com/sharon-xa/pretty-alias/v2/internal/tui"
 )
 
 // Exit codes.

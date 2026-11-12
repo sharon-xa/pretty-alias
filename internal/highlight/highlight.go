@@ -16,7 +16,7 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/colorprofile"
 
-	"github.com/sharon-xa/pretty-alias/internal/shell"
+	"github.com/sharon-xa/pretty-alias/v2/internal/shell"
 )
 
 // Highlighter highlights commands for one shell. Create it once and reuse it.

@@ -12,8 +12,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/sharon-xa/pretty-alias/internal/alias"
-	"github.com/sharon-xa/pretty-alias/internal/highlight"
+	"github.com/sharon-xa/pretty-alias/v2/internal/alias"
+	"github.com/sharon-xa/pretty-alias/v2/internal/highlight"
 )
 
 const footerHeight = 1

@@ -25,7 +25,7 @@ A change is done only when **`just check` and `just smoke` both pass**. If eithe
 
 ## Architecture rules (summary; details in ARCHITECTURE.md)
 
-- `main.go` stays in the repo root (keeps `go install github.com/sharon-xa/pretty-alias@latest` working). It only calls `app.Run`.
+- `main.go` stays in the repo root (keeps `go install github.com/sharon-xa/pretty-alias/v2@latest` working). It only calls `app.Run`.
 - Only `internal/app` may print to stdout/stderr, read the environment, detect the terminal, or choose an exit code (0 ok, including "no aliases"; 1 error; 2 usage).
 - Nothing outside `app` calls `os.Exit`, `log.Fatal` or `panic`; return `error`.
 - `shell` and `alias` know nothing about terminals or Bubble Tea. `tui` never reads files or env.
