@@ -79,7 +79,9 @@ until [ -s "$work/port" ]; do
     sleep 0.1
 done
 
-PRETTY_ALIAS_BASE_URL="http://127.0.0.1:$(cat "$work/port")" \
+# A throwaway HOME, so the shell-completion stubs don't land in the real one.
+HOME="$work/home" XDG_DATA_HOME="$work/home/.local/share" ZDOTDIR="$work/home" \
+    PRETTY_ALIAS_BASE_URL="http://127.0.0.1:$(cat "$work/port")" \
     PRETTY_ALIAS_VERSION="$version" \
     INSTALL_DIR="$work/bin" \
     sh "$root/install.sh" || fail "install.sh failed against the snapshot"

@@ -23,6 +23,7 @@ The script detects your OS (Linux, macOS) and CPU (amd64, arm64), downloads the 
 |---|---|
 | `PRETTY_ALIAS_VERSION` | Install a specific release, e.g. `v1.2.1` (default: the latest) |
 | `INSTALL_DIR` | Install somewhere else, e.g. `INSTALL_DIR=$HOME/bin` |
+| `PRETTY_ALIAS_NO_COMPLETIONS` | Set to anything to skip installing [shell completion](#shell-completion) |
 
 For example: `curl -fsSL …/install.sh | INSTALL_DIR=$HOME/bin PRETTY_ALIAS_VERSION=v1.2.1 sh` (put the variables on the `sh` side of the pipe). If you'd rather not pipe to a shell, download `install.sh`, read it, and run it.
 
@@ -63,23 +64,29 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 
 ### Shell completion
 
-`--completion` prints a script that completes the flags and their values (shells, sort orders, theme names, and file paths for `--file`). Install it once:
+Tab completes the flags and their values: shells, sort orders, theme names, and file paths for `--file`.
 
-```sh
-# bash (needs the bash-completion package; or put `source <(pretty-alias --completion bash)` in ~/.bashrc)
-mkdir -p ~/.local/share/bash-completion/completions
-pretty-alias --completion bash > ~/.local/share/bash-completion/completions/pretty-alias
+**With the install script it is set up for you.** For each of bash, zsh and fish that is installed, the script writes a small file where that shell looks for completions by itself. The file asks `pretty-alias --completion <shell>` for the real script when you first press tab, so it stays current when you upgrade. Open a new shell after installing.
 
-# zsh: any directory in $fpath, added before `compinit` runs in ~/.zshrc,
-# e.g. `fpath=(~/.zfunc $fpath)`; or put `source <(pretty-alias --completion zsh)` after compinit
-mkdir -p ~/.zfunc
-pretty-alias --completion zsh > ~/.zfunc/_pretty-alias
+| Shell | File (as root: under `/usr/local/share`) | Needs |
+|---|---|---|
+| bash | `~/.local/share/bash-completion/completions/pretty-alias` | the `bash-completion` package (installed by default on most Linux distributions) |
+| zsh | `~/.local/share/zsh/site-functions/_pretty-alias`, or a writable `site-functions` directory already in zsh's `$fpath` | if it's the first one, a line in `~/.zshrc` (below) |
+| fish | `~/.local/share/fish/vendor_completions.d/pretty-alias.fish` | nothing |
 
-# fish
-pretty-alias --completion fish > ~/.config/fish/completions/pretty-alias.fish
+zsh has no per-user directory it always reads, so unless one is already set up, the installer prints this line for you to add to `~/.zshrc`, **above** the line that runs `compinit` (with oh-my-zsh: above `source $ZSH/oh-my-zsh.sh`):
+
+```zsh
+fpath=(~/.local/share/zsh/site-functions $fpath)
 ```
 
-Regenerate it after upgrading so new flags and themes are included.
+**With `go install`** (or to set it up by hand), add one line to your shell's config:
+
+```sh
+eval "$(pretty-alias --completion bash)"            # ~/.bashrc
+source <(pretty-alias --completion zsh)             # ~/.zshrc, after compinit
+pretty-alias --completion fish | source             # ~/.config/fish/config.fish
+```
 
 ### Keys
 

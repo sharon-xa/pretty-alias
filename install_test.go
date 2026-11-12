@@ -47,12 +47,12 @@ func platformAsset(t *testing.T) string {
 	return "pretty-alias-" + runtime.GOOS + "-" + runtime.GOARCH
 }
 
-// server serves /download/<tag>/<name> from files; everything else is a 404.
+// server serves /download/<any tag>/<name> from files; everything else is a 404.
 func server(t *testing.T, files map[string][]byte) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		const prefix = "/download/" + fakeTag + "/"
-		if name, ok := strings.CutPrefix(r.URL.Path, prefix); ok {
+		if rest, ok := strings.CutPrefix(r.URL.Path, "/download/"); ok {
+			_, name, _ := strings.Cut(rest, "/")
 			if data, found := files[name]; found {
 				_, _ = w.Write(data)
 				return
@@ -72,22 +72,82 @@ type result struct {
 
 func runInstaller(t *testing.T, srv *httptest.Server, version string) result {
 	t.Helper()
+	dir := filepath.Join(t.TempDir(), "nested", "bin") // does not exist yet
+	return runInstallerWith(t, installer{srv: srv, version: version, dir: dir})
+}
+
+// installer is one run of install.sh. It runs hermetically: HOME is a temp
+// dir, and PATH holds only the tools install.sh needs plus fake shells, so
+// shell detection is under the test's control and nothing touches the real
+// home directory.
+type installer struct {
+	srv     *httptest.Server
+	version string
+	dir     string   // INSTALL_DIR
+	home    string   // default: a new temp dir
+	shells  []string // fake shells on PATH: bash, zsh, fish
+	fpath   []string // what the fake zsh reports as its default $fpath
+	env     []string // extra variables
+}
+
+// installTools are the commands install.sh runs.
+var installTools = []string{
+	"sh", "curl", "uname", "od", "head", "wc", "mktemp", "awk", "tr", "id", "mkdir", "cp",
+	"chmod", "mv", "rm", "dirname", "grep", "sha256sum", "shasum", "openssl",
+}
+
+func runInstallerWith(t *testing.T, in installer) result {
+	t.Helper()
 	for _, tool := range []string{"sh", "curl"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			t.Skipf("%s not installed", tool)
 		}
 	}
-	dir := filepath.Join(t.TempDir(), "nested", "bin") // does not exist yet
+	if in.home == "" {
+		in.home = t.TempDir()
+	}
+	path := t.TempDir()
+	for _, tool := range installTools {
+		if real, err := exec.LookPath(tool); err == nil {
+			if err := os.Symlink(real, filepath.Join(path, tool)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	for _, sh := range in.shells {
+		script := "#!/bin/sh\n"
+		if sh == "zsh" { // install.sh asks zsh for its default $fpath
+			for _, d := range in.fpath {
+				script += "echo '" + d + "'\n"
+			}
+		}
+		if err := os.WriteFile(filepath.Join(path, sh), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	cmd := exec.Command("sh", "install.sh")
-	cmd.Env = append(os.Environ(),
-		"PRETTY_ALIAS_BASE_URL="+srv.URL,
-		"PRETTY_ALIAS_VERSION="+version,
-		"INSTALL_DIR="+dir,
+	for _, kv := range os.Environ() {
+		name, _, _ := strings.Cut(kv, "=")
+		switch {
+		case name == "PATH", name == "HOME", name == "ZDOTDIR", name == "INSTALL_DIR",
+			strings.HasPrefix(name, "XDG_"), strings.HasPrefix(name, "PRETTY_ALIAS_"):
+		default:
+			cmd.Env = append(cmd.Env, kv)
+		}
+	}
+	cmd.Env = append(cmd.Env,
+		"PATH="+path,
+		"HOME="+in.home,
+		"PRETTY_ALIAS_BASE_URL="+in.srv.URL,
+		"PRETTY_ALIAS_VERSION="+in.version,
+		"INSTALL_DIR="+in.dir,
 	)
+	cmd.Env = append(cmd.Env, in.env...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
-	return result{out: stdout.String(), errOut: stderr.String(), err: err, dir: dir}
+	return result{out: stdout.String(), errOut: stderr.String(), err: err, dir: in.dir}
 }
 
 func checksums(entries map[string][]byte) []byte {
@@ -284,15 +344,8 @@ func TestInstallReplacesExistingBinaryAtomically(t *testing.T) {
 		t.Fatal(r.errOut)
 	}
 	// Second run into the same directory must replace, not fail or leave temp files.
-	cmd := exec.Command("sh", "install.sh")
-	cmd.Env = append(
-		os.Environ(),
-		"PRETTY_ALIAS_BASE_URL="+srv.URL,
-		"PRETTY_ALIAS_VERSION="+fakeTag,
-		"INSTALL_DIR="+r.dir,
-	)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("re-install failed: %v\n%s", err, out)
+	if r := runInstallerWith(t, installer{srv: srv, version: fakeTag, dir: r.dir}); r.err != nil {
+		t.Fatalf("re-install failed: %v\n%s", r.err, r.errOut)
 	}
 	if files := installedFiles(r.dir); len(files) != 1 || files[0] != "pretty-alias" {
 		t.Errorf("unexpected files after re-install: %v", files)
