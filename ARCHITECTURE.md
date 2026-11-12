@@ -53,6 +53,7 @@ app ──► tui ──► highlight ──► shell
 | Search / filter (#25) | Done (substring, smart-case): `tui.Model.filter` + `filterRows`. Fuzzy matching would replace `filterRows` |
 | `--json`, `--tsv` (#36) | next to `printPlain` in `app`; the data is already typed |
 | Copy to clipboard, selection (#28) | `tui`: a cursor in `Model` + a binding in `keys.go` |
+| New key bindings | `tui/keys.go`: add it to `keyMap` and `FullHelp()` (the `?` view). `ShortHelp()` (the footer) stays at `/`, `?`, `q` so it fits in 60 columns |
 | Diagnostics: duplicates, shadowing (#40) | new package `internal/lint` taking `[]alias.Alias` |
 | Add/edit/delete (#43) | new package `internal/edit`, using `Alias.File`/`Line`; `tui` only emits intents |
 
@@ -71,7 +72,8 @@ app ──► tui ──► highlight ──► shell
 - **`main.go` stays in the root**, not `cmd/pretty-alias/`, so the documented `go install …@latest` path keeps working.
 - **Parsing is its own package with a typed result** (`alias.Alias`), not `[][]string`. Everything later (search, JSON, sources) depends on that.
 - **No `.env`/`godotenv`.** Configuration is the real environment plus flags. The debug log goes to the user cache dir, never the working directory.
-- **`esc` never quits.** `q` and `ctrl+c` quit; `esc` belongs to the filter (cancel while typing, clear when applied). While the filter input has focus every printable key is text, so only `enter`, `esc` and `ctrl+c` are commands there.
+- **`esc` never quits.** `q` and `ctrl+c` quit; `esc` closes the `?` help if it is open, otherwise it belongs to the filter (cancel while typing, clear when applied).
+- **The footer keeps its keys visible.** When the line is too long, the status (count, path, percentage) gives way first, and the path is shortened from the left. While the filter input has focus every printable key is text, so only `enter`, `esc` and `ctrl+c` are commands there.
 - **Mouse is not captured**, so you can select and copy text with the terminal as usual. The wheel still scrolls: on the alternate screen most terminals send `↑`/`↓` for it when the app doesn't capture the mouse ("alternate scroll"; plain xterm is the exception). Revisit if/when row selection (#28) lands.
 - **Highlighting is done once, up front** (`tui.New`). That costs ~0.3 s for 2000 aliases and ~0.03 s for a typical 200. If this ever matters, highlight lazily for the visible rows. The same goes for rendering: each filter keystroke re-renders the matching rows (~0.1 s at 2000 matches, ~0.01 s at 200); render only the visible rows if that ever feels slow.
 - **Release asset contract** (what `install.sh` expects): each release publishes `pretty-alias-<os>-<arch>` for `linux`/`darwin` × `amd64`/`arm64`, plus a `checksums.txt` in `sha256sum` format (`<hash>  <filename>`). GoReleaser (`.goreleaser.yaml`) produces exactly this: bare binaries (`formats: [binary]`) and a fixed checksum file name, both of which differ from GoReleaser's defaults. `scripts/check-dist.sh` enforces it in CI and before every release. The one exception is the legacy v1.2.1 release (a bare `pretty-alias` Linux amd64 binary with no checksums), which the installer still accepts with a warning.

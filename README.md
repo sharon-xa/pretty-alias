@@ -65,7 +65,8 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 | `g` / `home`, `G` / `end` | Top / bottom |
 | Mouse wheel | Scroll. The mouse is not captured, so you can still select and copy text; the terminal turns the wheel into `↑`/`↓` (most do by default, plain xterm doesn't). |
 | `/` | Filter: type to show only aliases whose name or command contains the text (case-insensitive unless it has a capital letter). `enter` keeps the filter, `esc` clears it. While typing, every letter goes into the filter. |
-| `esc` | Clear the filter |
+| `?` | Show or hide every key binding (the footer only lists `/`, `?` and `q`) |
+| `esc` | Close the `?` help, or else clear the filter |
 | `q` / `ctrl+c` | Quit (`ctrl+c` also works while typing a filter) |
 
 ### Environment

@@ -5,9 +5,9 @@ import (
 	"charm.land/bubbles/v2/viewport"
 )
 
-// keyMap is the single source of truth for key bindings. The footer help and
-// the viewport's scrolling both read from it, so adding a binding here is all
-// it takes to make it work and show up in `?`-style help later.
+// keyMap is the single source of truth for key bindings. The footer, the `?`
+// help and the viewport's scrolling all read from it, so adding a binding here
+// is all it takes to make it work and show up in the help.
 type keyMap struct {
 	Up       key.Binding
 	Down     key.Binding
@@ -18,6 +18,10 @@ type keyMap struct {
 	Top      key.Binding
 	Bottom   key.Binding
 	Quit     key.Binding
+
+	// Help toggles the full help; CloseHelp is esc, which also closes it.
+	Help      key.Binding
+	CloseHelp key.Binding
 
 	// Filter opens the filter input; ClearFilter drops an active filter and
 	// is only enabled while one is applied.
@@ -46,6 +50,13 @@ func newKeyMap() keyMap {
 		Bottom:   key.NewBinding(key.WithKeys("G", "end"), key.WithHelp("G", "bottom")),
 		Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
 
+		Help: key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
+		CloseHelp: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "close help"),
+			key.WithDisabled(),
+		),
+
 		Filter: key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 		ClearFilter: key.NewBinding(
 			key.WithKeys("esc"),
@@ -59,17 +70,18 @@ func newKeyMap() keyMap {
 	}
 }
 
-// ShortHelp implements help.KeyMap (the one-line footer).
+// ShortHelp implements help.KeyMap (the one-line footer). It is kept short
+// enough to fit in 60 columns; scrolling keys are only in the full help.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.PageDown, k.Top, k.Filter, k.ClearFilter, k.Quit}
+	return []key.Binding{k.Filter, k.ClearFilter, k.Help, k.Quit}
 }
 
-// FullHelp implements help.KeyMap (reserved for a future `?` overlay).
+// FullHelp implements help.KeyMap (the `?` view).
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.HalfUp, k.HalfDown, k.Top, k.Bottom},
-		{k.Filter, k.ClearFilter, k.Quit},
+		{k.Filter, k.ClearFilter, k.Help, k.Quit},
 	}
 }
 

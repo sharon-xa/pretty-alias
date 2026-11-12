@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -451,5 +452,188 @@ func BenchmarkFilterKeystroke2000(b *testing.B) {
 			m.Update(press("backspace"))
 			m.Update(press("backspace"))
 		}
+	}
+}
+
+var sgr = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// plain returns the view without color codes, for matching text that is
+// styled in several pieces (such as "? help").
+func plain(m *Model) string { return sgr.ReplaceAllString(m.content(), "") }
+
+// lastLine returns the bottom line of the view (the footer's status line),
+// without color codes.
+func lastLine(m *Model) string {
+	lines := strings.Split(plain(m), "\n")
+	return lines[len(lines)-1]
+}
+
+// Regression test for issue #27: the footer was wider than 80 columns, so
+// "q quit" (the one thing it most needs to say) was cut off.
+func TestFooterKeepsQuitVisible(t *testing.T) {
+	long := "~/" + strings.Repeat("very-long-directory/", 10) + "config.fish"
+	for _, w := range []int{120, 80, 60, 45} {
+		for _, filtered := range []bool{false, true} {
+			m := New(sample(157), nil, long)
+			send(m, size(w, 24))
+			if filtered {
+				send(m, press("/"))
+				typeText(m, "a00")
+				send(m, press("enter"))
+			}
+			line := lastLine(m)
+			if lw := lipgloss.Width(line); lw > w {
+				t.Errorf("w=%d filtered=%v: footer is %d cells wide", w, filtered, lw)
+			}
+			for _, want := range []string{"q quit", "? help", "/ filter"} {
+				if !strings.Contains(line, want) {
+					t.Errorf("w=%d filtered=%v: footer lacks %q: %q", w, filtered, want, line)
+				}
+			}
+			if filtered && !strings.Contains(line, "esc clear filter") {
+				t.Errorf("w=%d: footer lacks the clear-filter key: %q", w, line)
+			}
+		}
+	}
+}
+
+func TestFooterShortensLongSourcePath(t *testing.T) {
+	long := "~/" + strings.Repeat("dir/", 20) + "config.fish"
+	m := New(sample(5), nil, long)
+	send(m, size(80, 24))
+	line := lastLine(m)
+	if !strings.Contains(line, "…") || !strings.Contains(line, "config.fish") {
+		t.Errorf("long path not shortened to its tail: %q", line)
+	}
+	send(m, size(200, 24))
+	if line := lastLine(m); !strings.Contains(line, long) {
+		t.Errorf("path shortened although it fits: %q", line)
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	m := newModel(t, 200)
+	send(m, size(100, 30))
+	short := m.vp.Height()
+	if strings.Contains(plain(m), "half page down") {
+		t.Fatal("full help shown before ?")
+	}
+
+	send(m, press("?"))
+	v := plain(m)
+	for _, want := range []string{"half page down", "bottom", "page up", "? close help"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("full help lacks %q:\n%s", want, v)
+		}
+	}
+	if m.vp.Height() >= short {
+		t.Errorf("table did not make room for the help: %d -> %d", short, m.vp.Height())
+	}
+	if got := lipgloss.Height(v); got != 30 {
+		t.Errorf("view is %d lines tall, want 30", got)
+	}
+
+	send(m, press("?"))
+	if strings.Contains(plain(m), "half page down") || m.vp.Height() != short {
+		t.Errorf("? did not close the help (viewport %d, want %d)", m.vp.Height(), short)
+	}
+}
+
+// esc closes the help first, then clears the filter, and never quits.
+func TestEscClosesHelpBeforeClearingFilter(t *testing.T) {
+	m := newModel(t, 200)
+	send(m, size(100, 30), press("/"))
+	typeText(m, "a01")
+	send(m, press("enter"), press("?"))
+	if !m.showHelp {
+		t.Fatal("? did not open the help")
+	}
+
+	if _, cmd := m.Update(press("esc")); isQuit(cmd) {
+		t.Fatal("esc quit")
+	}
+	if m.showHelp || m.filter.Value() != "a01" {
+		t.Fatalf("first esc: help=%v query=%q, want closed help, filter kept",
+			m.showHelp, m.filter.Value())
+	}
+	send(m, press("esc"))
+	if m.filter.Value() != "" {
+		t.Errorf("second esc did not clear the filter: %q", m.filter.Value())
+	}
+	if _, cmd := m.Update(press("esc")); isQuit(cmd) {
+		t.Error("esc quit")
+	}
+}
+
+func TestQuestionMarkIsTextWhileFiltering(t *testing.T) {
+	m := newModel(t, 20)
+	send(m, size(100, 30), press("?"), press("/")) // opening the filter closes the help
+	if m.showHelp {
+		t.Error("help still open while typing a filter")
+	}
+	typeText(m, "a?")
+	if m.showHelp || m.filter.Value() != "a?" {
+		t.Errorf("help=%v query=%q, want ? typed as text", m.showHelp, m.filter.Value())
+	}
+}
+
+// Opening the help shrinks the table viewport; at the bottom of the table the
+// offset must be clamped, the same failure mode as issue #5.
+func TestHelpWhileScrolledToBottom(t *testing.T) {
+	m := newModel(t, 200)
+	send(m, size(100, 30), press("G"), press("?"))
+	if max := m.vp.TotalLineCount() - m.vp.Height(); m.vp.YOffset() > max {
+		t.Errorf("offset %d beyond max %d", m.vp.YOffset(), max)
+	}
+	send(m, press("?"))
+	if max := m.vp.TotalLineCount() - m.vp.Height(); m.vp.YOffset() > max {
+		t.Errorf("after closing: offset %d beyond max %d", m.vp.YOffset(), max)
+	}
+	_ = m.content()
+}
+
+func TestHelpFitsTheWindow(t *testing.T) {
+	for _, sz := range [][2]int{{120, 40}, {80, 24}, {60, 10}, {40, 8}, {20, 6}, {10, 3}, {1, 1}} {
+		m := newModel(t, 200)
+		send(m, size(sz[0], sz[1]), press("?"))
+		v := plain(m)
+		if got := lipgloss.Height(v); got > sz[1] {
+			t.Errorf("%dx%d: view is %d lines tall", sz[0], sz[1], got)
+		}
+		if sz[0] >= minTableW {
+			for _, line := range strings.Split(v, "\n") {
+				if lw := lipgloss.Width(line); lw > sz[0] {
+					t.Errorf("%dx%d: line is %d cells wide: %q", sz[0], sz[1], lw, line)
+					break
+				}
+			}
+		}
+		// toggling and resizing must never panic
+		send(m, size(sz[1], sz[0]), press("?"), press("G"), press("?"), size(sz[0], sz[1]))
+		_ = m.content()
+	}
+}
+
+// Too short for the full help: ? falls back to the one-line footer.
+func TestHelpFallsBackOnShortWindows(t *testing.T) {
+	m := newModel(t, 200)
+	send(m, size(100, 6), press("?"))
+	if strings.Contains(plain(m), "half page down") {
+		t.Errorf("full help squeezed into a 6-line window:\n%s", plain(m))
+	}
+	if !strings.Contains(lastLine(m), "? close help") {
+		t.Errorf("footer does not say the help is open: %q", lastLine(m))
+	}
+	send(m, size(100, 30))
+	if !strings.Contains(plain(m), "half page down") {
+		t.Error("full help not shown after the window grew")
+	}
+}
+
+func TestSourceLabelIsSanitized(t *testing.T) {
+	m := New(sample(3), nil, "~/evil\x1b]0;x\x07\x1b[2J.zshrc")
+	send(m, size(120, 20))
+	if v := m.content(); strings.Contains(v, "\x1b[2J") || strings.Contains(v, "\x1b]0;") {
+		t.Errorf("raw escape sequence from the source label reached the screen: %q", v)
 	}
 }

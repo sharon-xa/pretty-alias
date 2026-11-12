@@ -19,7 +19,9 @@ import (
 	"github.com/sharon-xa/pretty-alias/v2/internal/highlight"
 )
 
-const footerHeight = 1
+// minTableLines is how much of the table must stay visible for the full help
+// to be shown; on shorter windows `?` falls back to the one-line footer.
+const minTableLines = 3
 
 // Model is the Bubble Tea model.
 type Model struct {
@@ -28,9 +30,10 @@ type Model struct {
 	nameW  int    // measured over all rows, so filtering doesn't shift the columns
 	source string // where the aliases came from, shown in the footer
 
-	keys keyMap
-	help help.Model
-	vp   viewport.Model
+	keys     keyMap
+	help     help.Model
+	showHelp bool // the full (`?`) help is open
+	vp       viewport.Model
 
 	// filter holds the query. It has focus while the user is typing; after
 	// enter it keeps its value (the filter stays applied) without focus.
@@ -67,6 +70,9 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	h.Styles.ShortKey = lipgloss.NewStyle().Foreground(colorAccent)
 	h.Styles.ShortDesc = lipgloss.NewStyle().Foreground(colorDim)
 	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(colorDim)
+	h.Styles.FullKey = h.Styles.ShortKey
+	h.Styles.FullDesc = h.Styles.ShortDesc
+	h.Styles.FullSeparator = h.Styles.ShortSeparator
 
 	in := textinput.New()
 	in.Prompt = "/"
@@ -77,7 +83,7 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	in.SetStyles(st)
 
 	return &Model{
-		all: rows, rows: rows, nameW: nameW, source: source,
+		all: rows, rows: rows, nameW: nameW, source: highlight.Sanitize(source),
 		keys: keys, help: h, vp: vp, filter: in,
 	}
 }
@@ -105,7 +111,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
+		case key.Matches(msg, m.keys.Help):
+			m.setHelp(!m.showHelp)
+			return m, nil
+		case key.Matches(msg, m.keys.CloseHelp): // only enabled while the help is open
+			m.setHelp(false)
+			return m, nil
 		case key.Matches(msg, m.keys.Filter):
+			m.setHelp(false) // its keys don't apply while typing
 			m.filtering = true
 			m.filter.CursorEnd()
 			return m, m.filter.Focus()
@@ -170,6 +183,7 @@ func (m *Model) applyFilter() {
 	m.query = q
 	m.rows = filterRows(m.all, q)
 	if m.ready {
+		m.layout() // the full help can change height with ClearFilter enabled
 		m.setContent()
 		m.vp.GotoTop()
 	}
@@ -198,21 +212,44 @@ func filterRows(rows []row, q string) []row {
 	return out
 }
 
-// resize re-lays the table out for the new size and keeps the scroll position
-// valid (the table can get shorter when the window gets wider).
+// resize re-lays the table out for the new size.
 func (m *Model) resize(w, h int) {
 	m.width, m.height = w, h
 	m.help.SetWidth(w)
 	m.vp.SetWidth(w)
-	m.filter.SetWidth(max(w/2, 10))
-	if m.showFooter() {
-		m.vp.SetHeight(h - footerHeight)
-	} else {
-		m.vp.SetHeight(max(h, 1))
-	}
+	m.layout()
 	m.setContent()
 	m.vp.SetYOffset(m.vp.YOffset()) // clamps into range
 	m.ready = true
+}
+
+// layout sizes the viewport and the filter input around the footer. It runs on
+// resize and whenever the footer changes height (the `?` help).
+func (m *Model) layout() {
+	m.vp.SetHeight(max(m.height-m.footerLines(), 1))
+	// Clamp the offset: the table may have just lost or gained lines on screen.
+	m.vp.SetYOffset(m.vp.YOffset())
+
+	// The input gets whatever the footer line has left, assuming the widest count.
+	n := len(m.all)
+	countW := len(fmt.Sprintf("  %d/%d aliases  ", n, n))
+	helpW := lipgloss.Width(m.help.ShortHelpView(m.keys.filterHelp()))
+	promptW := lipgloss.Width(m.filter.Prompt)
+	m.filter.SetWidth(max(m.width-1-promptW-1-countW-helpW, 8)) // 1 margin + 1 cursor
+}
+
+// setHelp opens or closes the full help and re-lays the screen out.
+func (m *Model) setHelp(on bool) {
+	m.showHelp = on
+	m.keys.CloseHelp.SetEnabled(on)
+	if on {
+		m.keys.Help.SetHelp("?", "close help")
+	} else {
+		m.keys.Help.SetHelp("?", "help")
+	}
+	if m.ready {
+		m.layout()
+	}
 }
 
 func (m *Model) setContent() {
@@ -235,14 +272,38 @@ func (m *Model) content() string {
 	if !m.ready {
 		return ""
 	}
-	if !m.showFooter() {
+	if m.footerLines() == 0 {
 		return m.vp.View()
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, m.vp.View(), m.footer())
 }
 
-// showFooter is false on windows too short to fit content plus a footer.
-func (m *Model) showFooter() bool { return m.height > footerHeight+1 }
+// footerLines is the footer's height: none on windows too short for content
+// plus a footer, one line normally, more with the full help open.
+func (m *Model) footerLines() int {
+	if m.height <= 2 {
+		return 0
+	}
+	if m.fullHelpFits() {
+		return lipgloss.Height(m.fullHelp()) + 1
+	}
+	return 1
+}
+
+// fullHelpFits reports whether the `?` help is open and the window is tall
+// enough for it next to a few table lines.
+func (m *Model) fullHelpFits() bool {
+	return m.showHelp && !m.filtering &&
+		m.height >= lipgloss.Height(m.fullHelp())+1+minTableLines
+}
+
+func (m *Model) fullHelp() string {
+	h := m.help // indented by one column, so it gets one column less
+	h.SetWidth(max(m.width-1, 1))
+	// help drops whole columns that don't fit; MaxWidth is the backstop.
+	return lipgloss.NewStyle().PaddingLeft(1).MaxWidth(m.width).
+		Render(h.FullHelpView(m.keys.FullHelp()))
+}
 
 func (m *Model) footer() string {
 	dim := lipgloss.NewStyle().Foreground(colorDim)
@@ -251,18 +312,52 @@ func (m *Model) footer() string {
 		count = fmt.Sprintf("%d/%d aliases", len(m.rows), len(m.all))
 	}
 
-	var line string
 	if m.filtering {
-		line = " " + m.filter.View() + dim.Render("  "+count+"  ") +
+		line := " " + m.filter.View() + dim.Render("  "+count+"  ") +
 			m.help.ShortHelpView(m.keys.filterHelp())
-	} else {
-		status := count
-		if m.query != "" {
-			status += " · /" + highlight.Sanitize(m.query)
-		}
-		pct := m.vp.ScrollPercent() * 100
-		status = fmt.Sprintf(" %s · %s · %3.0f%%  ", status, m.source, pct)
-		line = dim.Render(status) + m.help.ShortHelpView(m.keys.ShortHelp())
+		return lipgloss.NewStyle().MaxWidth(m.width).Render(line)
 	}
-	return lipgloss.NewStyle().MaxWidth(m.width).Render(line)
+
+	// The keys come first: if the line is too long, the status gives way.
+	keys := m.help.ShortHelpView(m.keys.ShortHelp())
+	room := m.width - lipgloss.Width(keys)
+	head := " " + count
+	if m.query != "" {
+		head += " · /" + highlight.Sanitize(m.query)
+	}
+	tail := fmt.Sprintf(" · %3.0f%%  ", m.vp.ScrollPercent()*100)
+	src := truncateLeft(m.source, room-lipgloss.Width(head)-lipgloss.Width(tail)-len(" · "))
+	status := head
+	if src != "" {
+		status += " · " + src
+	}
+	status += tail
+	if room > 0 { // MaxWidth(0) means no limit
+		status = lipgloss.NewStyle().MaxWidth(room).Render(dim.Render(status))
+	} else {
+		status = ""
+	}
+
+	line := lipgloss.NewStyle().MaxWidth(m.width).Render(status + keys)
+	if m.fullHelpFits() {
+		return lipgloss.JoinVertical(lipgloss.Left, m.fullHelp(), line)
+	}
+	return line
+}
+
+// truncateLeft shortens s to at most w cells by cutting from the left, which
+// keeps the file name of a path: "…/fish/config.fish". It returns "" if w is
+// too small to show anything useful.
+func truncateLeft(s string, w int) string {
+	if lipgloss.Width(s) <= w {
+		return s
+	}
+	if w < 4 {
+		return ""
+	}
+	r := []rune(s)
+	for len(r) > 0 && lipgloss.Width(string(r))+1 > w {
+		r = r[1:]
+	}
+	return "…" + string(r)
 }
