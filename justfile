@@ -88,7 +88,7 @@ smoke filter="":
     done < <(cd "$root" && find testdata -type f ! -name README.md ! -path 'testdata/gen/*' | sort)
     echo "---- ok/empty: $pass   failing: $fail"
 
-# format all Go code (gofumpt + golines, configured in .golangci.yml)
+# format all Go code (gofumpt + golines, configured in .golangci.yaml)
 fmt:
     golangci-lint fmt ./...
 

@@ -9,7 +9,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before structural changes. It has the pa
 ```sh
 just check     # vet + golangci-lint (incl. gofumpt/golines format check) + race tests (what CI runs)
 just smoke     # real binary in a pty over every fixture; everything must be "ok" or "EMPTY"
-just fmt       # apply gofumpt + golines (config in .golangci.yml, max line length 100)
+just fmt       # apply gofumpt + golines (config in .golangci.yaml, max line length 100)
 just test      # go test ./...
 just try testdata/zshrc zsh            # open the TUI on a fixture in a throwaway $HOME
 just plain testdata/config.fish fish   # parsed output, no TUI
@@ -47,7 +47,7 @@ A change is done only when **`just check` and `just smoke` both pass**. If eithe
 - **Bubble Tea v2** (`charm.land/*/v2`, not `github.com/charmbracelet/*`): `View()` returns `tea.View` (alt screen is `v.AltScreen = true`). Keys are `tea.KeyPressMsg`. The space bar's key string is `"space"`, not `" "`. Viewport and help size and offset go through methods (`SetWidth`, `YOffset()`, …).
 - **Colour detection**: `colorprofile.Detect` asks tmux for its real capabilities, so `TERM=...` overrides have no effect inside tmux. To test colour modes end to end, run under `env -i HOME=$HOME PATH=$PATH TERM=... COLORTERM=...`.
 - **Release asset contract**: `install.sh` expects `pretty-alias-<os>-<arch>` (linux/darwin × amd64/arm64) plus `checksums.txt` in `sha256sum` format. GoReleaser makes these only because `.goreleaser.yaml` overrides its defaults (`formats: [binary]`, `checksum.name_template`). After touching `.goreleaser.yaml` or `install.sh`, run `just dist`; `scripts/check-dist.sh` checks the contract and installs the snapshot with the real installer.
-- **CI is path-filtered** (`.github/workflows/ci.yml`): it runs only for Go files, `go.mod`/`go.sum`, `testdata/`, `install.sh`, `.golangci.yml`, `.goreleaser.yaml`, `scripts/` and the workflow itself, and never for `.md` files. If the build or tests start depending on another kind of file (e.g. `go:embed` assets), add it to the `paths` list.
+- **CI is path-filtered** (`.github/workflows/ci.yml`): it runs only for Go files, `go.mod`/`go.sum`, `testdata/`, `install.sh`, `.golangci.yaml`, `.goreleaser.yaml`, `scripts/` and the workflow itself, and never for `.md` files. If the build or tests start depending on another kind of file (e.g. `go:embed` assets), add it to the `paths` list.
 - The debug log (`PRETTY_ALIAS_DEBUG=1`) goes to the user cache dir, never the working directory. No `.env` files.
 
 ## Code style

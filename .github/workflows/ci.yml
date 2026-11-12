@@ -12,7 +12,7 @@ on:
       - "testdata/**"
       - "!**.md"
       - install.sh
-      - .golangci.yml
+      - .golangci.yaml
       - .goreleaser.yaml
       - "scripts/**"
       - .github/workflows/ci.yml
