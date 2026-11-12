@@ -52,8 +52,8 @@ app ──► tui ──► highlight ──► shell
 | Descriptions / categories (#38, #39) | `Alias.Comment` is already parsed; add a field and a column in `tui/table.go` |
 | Search / filter (#25) | Done (substring, smart-case): `tui.Model.filter` + `filterRows`. Fuzzy matching would replace `filterRows` |
 | `--json`, `--tsv` (#36) | next to `printPlain` in `app`; the data is already typed |
-| Copy to clipboard, selection (#28) | `tui`: a cursor in `Model` + a binding in `keys.go` |
-| New key bindings | `tui/keys.go`: add it to `keyMap` and `FullHelp()` (the `?` view). `ShortHelp()` (the footer) stays at `/`, `?`, `q` so it fits in 60 columns |
+| Copy to clipboard, selection (#28) | Done: `tui/cursor.go`. `renderTable` returns each row's line span; the cursor is drawn in the viewport's gutter, so moving it never re-renders the table |
+| New key bindings | `tui/keys.go`: add it to `keyMap` and `FullHelp()` (the `?` view, 4 columns that fit in 80). `ShortHelp()` (the footer) stays at `/`, `y`, `?`, `q` so it fits in 60 columns |
 | Diagnostics: duplicates, shadowing (#40) | new package `internal/lint` taking `[]alias.Alias` |
 | Add/edit/delete (#43) | new package `internal/edit`, using `Alias.File`/`Line`; `tui` only emits intents |
 
@@ -72,9 +72,10 @@ app ──► tui ──► highlight ──► shell
 - **`main.go` stays in the root**, not `cmd/pretty-alias/`, so the documented `go install …@latest` path keeps working.
 - **Parsing is its own package with a typed result** (`alias.Alias`), not `[][]string`. Everything later (search, JSON, sources) depends on that.
 - **No `.env`/`godotenv`.** Configuration is the real environment plus flags. The debug log goes to the user cache dir, never the working directory.
-- **`esc` never quits.** `q` and `ctrl+c` quit; `esc` closes the `?` help if it is open, otherwise it belongs to the filter (cancel while typing, clear when applied).
-- **The footer keeps its keys visible.** When the line is too long, the status (count, path, percentage) gives way first, and the path is shortened from the left. While the filter input has focus every printable key is text, so only `enter`, `esc` and `ctrl+c` are commands there.
-- **Mouse is not captured**, so you can select and copy text with the terminal as usual. The wheel still scrolls: on the alternate screen most terminals send `↑`/`↓` for it when the app doesn't capture the mouse ("alternate scroll"; plain xterm is the exception). Revisit if/when row selection (#28) lands.
+- **`esc` never quits.** `q` and `ctrl+c` quit; `esc` closes the `?` help if it is open, otherwise it belongs to the filter (cancel while typing, clear when applied). While the filter input has focus every printable key is text, so only `enter`, `esc` and `ctrl+c` are commands there.
+- **The footer keeps its keys visible.** When the line is too long, the status (count, path, percentage) gives way first, and the path is shortened from the left.
+- **Mouse is not captured**, so you can select and copy text with the terminal as usual. The wheel still scrolls: on the alternate screen most terminals send `↑`/`↓` for it when the app doesn't capture the mouse ("alternate scroll"; plain xterm is the exception), and with the cursor (#28) it moves the selection. There is no click-to-select; that would need mouse capture.
+- **Copying is OSC 52 only** (`tea.SetClipboard`), so `tui` does no I/O and copying works over SSH. Terminals never confirm OSC 52, so the "copied" toast can't know it worked; tmux needs `set-clipboard on`. The copied text is the sanitized text (what is on screen), because a raw newline from a config file would run a command when pasted. A fallback to `wl-copy`/`xclip`/`pbcopy` would have to be injected by `app`.
 - **Highlighting is done once, up front** (`tui.New`). That costs ~0.3 s for 2000 aliases and ~0.03 s for a typical 200. If this ever matters, highlight lazily for the visible rows. The same goes for rendering: each filter keystroke re-renders the matching rows (~0.1 s at 2000 matches, ~0.01 s at 200); render only the visible rows if that ever feels slow.
 - **Release asset contract** (what `install.sh` expects): each release publishes `pretty-alias-<os>-<arch>` for `linux`/`darwin` × `amd64`/`arm64`, plus a `checksums.txt` in `sha256sum` format (`<hash>  <filename>`). GoReleaser (`.goreleaser.yaml`) produces exactly this: bare binaries (`formats: [binary]`) and a fixed checksum file name, both of which differ from GoReleaser's defaults. `scripts/check-dist.sh` enforces it in CI and before every release. The one exception is the legacy v1.2.1 release (a bare `pretty-alias` Linux amd64 binary with no checksums), which the installer still accepts with a warning.
 - **Releases are tag-driven.** Pushing a `v*` tag runs `.github/workflows/release.yml`: tests, a snapshot build plus the contract check, then `goreleaser release`. The binary's `--version` is the tag (`main.version` via `-ldflags`).

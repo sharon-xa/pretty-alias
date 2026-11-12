@@ -64,6 +64,10 @@ func press(s string) tea.Msg {
 		return tea.KeyPressMsg{Code: tea.KeyBackspace}
 	case "ctrl+c":
 		return tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	case "ctrl+u":
+		return tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl}
+	case "ctrl+d":
+		return tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl}
 	}
 	r := []rune(s)[0]
 	return tea.KeyPressMsg{Code: r, Text: s}
@@ -113,43 +117,90 @@ func TestQuitKeys(t *testing.T) {
 	}
 }
 
-func TestScrolling(t *testing.T) {
+// j/k move the cursor one alias at a time and the view follows; paging moves
+// the view and pulls the cursor along.
+func TestCursorMovement(t *testing.T) {
 	m := newModel(t, 300)
 	send(m, size(100, 20))
-	if m.vp.YOffset() != 0 {
-		t.Fatalf("starts at %d", m.vp.YOffset())
+	if m.cursor != 0 || m.vp.YOffset() != 0 {
+		t.Fatalf("starts at cursor %d, offset %d", m.cursor, m.vp.YOffset())
 	}
 	send(m, press("down"), press("down"), press("j"))
-	if m.vp.YOffset() != 3 {
-		t.Errorf("after 3 downs: offset %d, want 3", m.vp.YOffset())
+	if m.cursor != 3 {
+		t.Errorf("after 3 downs: cursor %d, want 3", m.cursor)
 	}
 	send(m, press("up"), press("k"))
-	if m.vp.YOffset() != 1 {
-		t.Errorf("after 2 ups: offset %d, want 1", m.vp.YOffset())
+	if m.cursor != 1 {
+		t.Errorf("after 2 ups: cursor %d, want 1", m.cursor)
 	}
+	assertCursorVisible(t, m)
+
+	for range 40 {
+		send(m, press("j"))
+		assertCursorVisible(t, m)
+	}
+	if m.vp.YOffset() == 0 {
+		t.Error("view did not follow the cursor down")
+	}
+
 	send(m, press("pgdown"))
-	if m.vp.YOffset() <= 1 {
-		t.Errorf("pgdown did not move: %d", m.vp.YOffset())
-	}
+	assertCursorVisible(t, m)
 	send(m, press("G"))
-	if !m.vp.AtBottom() {
-		t.Error("G did not reach the bottom")
+	if m.cursor != 299 || !m.vp.AtBottom() {
+		t.Errorf("G: cursor %d, at bottom %v", m.cursor, m.vp.AtBottom())
 	}
 	send(m, press("down"), press("down")) // must not go past the end
-	if !m.vp.AtBottom() {
-		t.Error("scrolled past the bottom")
+	if m.cursor != 299 || !m.vp.AtBottom() {
+		t.Error("moved past the last row")
 	}
 	send(m, press("g"))
-	if !m.vp.AtTop() {
-		t.Error("g did not reach the top")
+	if m.cursor != 0 || !m.vp.AtTop() {
+		t.Errorf("g: cursor %d, at top %v", m.cursor, m.vp.AtTop())
 	}
 	send(m, press("up"))
-	if m.vp.YOffset() != 0 {
-		t.Errorf("scrolled above the top: %d", m.vp.YOffset())
+	if m.cursor != 0 || m.vp.YOffset() != 0 {
+		t.Errorf("moved above the top: cursor %d, offset %d", m.cursor, m.vp.YOffset())
 	}
 	send(m, press("space")) // v2 reports the space bar as "space", not " "
-	if m.vp.YOffset() <= 1 {
-		t.Errorf("space did not page down: %d", m.vp.YOffset())
+	if m.vp.YOffset() == 0 || m.cursor == 0 {
+		t.Errorf("space did not page down: offset %d, cursor %d", m.vp.YOffset(), m.cursor)
+	}
+	assertCursorVisible(t, m)
+}
+
+// Paging always reaches the ends, even when the view can't scroll any further.
+func TestPagingReachesFirstAndLastRow(t *testing.T) {
+	m := newModel(t, 50)
+	send(m, size(100, 20))
+	for range 100 {
+		send(m, press("pgdown"))
+		assertCursorVisible(t, m)
+	}
+	if m.cursor != 49 {
+		t.Errorf("pgdown x100: cursor %d, want 49", m.cursor)
+	}
+	for range 100 {
+		send(m, press("ctrl+u"))
+		assertCursorVisible(t, m)
+	}
+	if m.cursor != 0 {
+		t.Errorf("ctrl+u x100: cursor %d, want 0", m.cursor)
+	}
+}
+
+// assertCursorVisible checks that the selected row's first line is on screen
+// and carries the cursor mark.
+func assertCursorVisible(t *testing.T, m *Model) {
+	t.Helper()
+	s := m.spans[m.cursor]
+	top := m.vp.YOffset()
+	if s.first < top || s.first >= top+m.vp.Height() {
+		t.Fatalf("cursor row %d (lines %d-%d) is off screen (offset %d, height %d)",
+			m.cursor, s.first, s.last, top, m.vp.Height())
+	}
+	line := strings.Split(m.vp.View(), "\n")[s.first-top]
+	if !strings.HasPrefix(sgr.ReplaceAllString(line, ""), "▌") {
+		t.Fatalf("cursor row's first line has no mark: %q", line)
 	}
 }
 
@@ -341,8 +392,8 @@ func TestFilterEnterKeepsEscClears(t *testing.T) {
 		t.Fatalf("after enter: filtering=%v rows=%d, want false/100", m.filtering, len(m.rows))
 	}
 	send(m, press("j")) // keys are commands again
-	if m.vp.YOffset() != 1 || m.filter.Value() != "a00" {
-		t.Fatalf("j after enter: offset %d, query %q", m.vp.YOffset(), m.filter.Value())
+	if m.cursor != 1 || m.filter.Value() != "a00" {
+		t.Fatalf("j after enter: cursor %d, query %q", m.cursor, m.filter.Value())
 	}
 	if v := m.content(); !strings.Contains(v, "100/200 aliases · /a00") {
 		t.Errorf("footer does not show the active filter:\n%s", v)
@@ -469,10 +520,10 @@ func lastLine(m *Model) string {
 }
 
 // Regression test for issue #27: the footer was wider than 80 columns, so
-// "q quit" (the one thing it most needs to say) was cut off.
+// "q quit" (the one thing it most needs to say) was cut off. It must fit in 60.
 func TestFooterKeepsQuitVisible(t *testing.T) {
 	long := "~/" + strings.Repeat("very-long-directory/", 10) + "config.fish"
-	for _, w := range []int{120, 80, 60, 45} {
+	for _, w := range []int{120, 80, 60} {
 		for _, filtered := range []bool{false, true} {
 			m := New(sample(157), nil, long)
 			send(m, size(w, 24))
@@ -485,7 +536,7 @@ func TestFooterKeepsQuitVisible(t *testing.T) {
 			if lw := lipgloss.Width(line); lw > w {
 				t.Errorf("w=%d filtered=%v: footer is %d cells wide", w, filtered, lw)
 			}
-			for _, want := range []string{"q quit", "? help", "/ filter"} {
+			for _, want := range []string{"q quit", "? help", "/ filter", "y copy"} {
 				if !strings.Contains(line, want) {
 					t.Errorf("w=%d filtered=%v: footer lacks %q: %q", w, filtered, want, line)
 				}

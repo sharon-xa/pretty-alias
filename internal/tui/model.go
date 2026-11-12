@@ -1,5 +1,5 @@
 // Package tui is the Bubble Tea front end: a scrollable, highlighted table of
-// aliases. It receives already-parsed data and never touches the filesystem
+// aliases with a cursor for copying. It receives already-parsed data and never touches the filesystem
 // or the shell, which keeps it trivially testable.
 package tui
 
@@ -35,6 +35,11 @@ type Model struct {
 	showHelp bool // the full (`?`) help is open
 	vp       viewport.Model
 
+	cursor   int    // index into rows
+	spans    []span // where each of rows is in the rendered table
+	toast    string // "copied …", shown in the footer for a moment
+	toastSeq int
+
 	// filter holds the query. It has focus while the user is typing; after
 	// enter it keeps its value (the filter stays applied) without focus.
 	filter    textinput.Model
@@ -63,8 +68,8 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 
 	keys := newKeyMap()
 	vp := viewport.New()
-	vp.KeyMap = keys.viewportKeys()
-	vp.MouseWheelEnabled = false // keep the mouse free for selecting/copying text
+	vp.KeyMap = viewport.KeyMap{} // Update handles every key itself
+	vp.MouseWheelEnabled = false  // keep the mouse free for selecting/copying text
 
 	h := help.New()
 	h.Styles.ShortKey = lipgloss.NewStyle().Foreground(colorAccent)
@@ -82,10 +87,12 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	st.Blurred.Prompt = lipgloss.NewStyle().Foreground(colorAccent)
 	in.SetStyles(st)
 
-	return &Model{
+	m := &Model{
 		all: rows, rows: rows, nameW: nameW, source: highlight.Sanitize(source),
 		keys: keys, help: h, vp: vp, filter: in,
 	}
+	m.vp.LeftGutterFunc = m.gutter
+	return m
 }
 
 // Run starts the program on the alternate screen and blocks until it exits.
@@ -102,6 +109,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.resize(msg.Width, msg.Height)
+		return m, nil
+
+	case toastDoneMsg:
+		if int(msg) == m.toastSeq {
+			m.toast = ""
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -126,24 +139,36 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filter.SetValue("")
 			m.applyFilter()
 			return m, nil
+		case key.Matches(msg, m.keys.Copy):
+			return m, m.copySelected(false)
+		case key.Matches(msg, m.keys.CopyName):
+			return m, m.copySelected(true)
+		case key.Matches(msg, m.keys.Up):
+			m.moveCursor(m.cursor - 1)
+		case key.Matches(msg, m.keys.Down):
+			m.moveCursor(m.cursor + 1)
 		case key.Matches(msg, m.keys.Top):
-			m.vp.GotoTop()
-			return m, nil
+			m.moveCursor(0)
 		case key.Matches(msg, m.keys.Bottom):
-			m.vp.GotoBottom()
-			return m, nil
+			m.moveCursor(len(m.rows) - 1)
+		case key.Matches(msg, m.keys.PageDown):
+			m.scroll(m.vp.PageDown, true)
+		case key.Matches(msg, m.keys.PageUp):
+			m.scroll(m.vp.PageUp, false)
+		case key.Matches(msg, m.keys.HalfDown):
+			m.scroll(m.vp.HalfPageDown, true)
+		case key.Matches(msg, m.keys.HalfUp):
+			m.scroll(m.vp.HalfPageUp, false)
 		}
+		return m, nil
 	}
 
-	var cmds []tea.Cmd
 	if m.filtering { // cursor blink and other input messages
 		var cmd tea.Cmd
 		m.filter, cmd = m.filter.Update(msg)
-		cmds = append(cmds, cmd)
+		return m, cmd
 	}
-	var cmd tea.Cmd
-	m.vp, cmd = m.vp.Update(msg)
-	return m, tea.Batch(append(cmds, cmd)...)
+	return m, nil
 }
 
 // updateFilter handles a key while the filter input has focus. Printable keys
@@ -185,8 +210,9 @@ func (m *Model) applyFilter() {
 	if m.ready {
 		m.layout() // the full help can change height with ClearFilter enabled
 		m.setContent()
-		m.vp.GotoTop()
 	}
+	m.cursor = 0
+	m.vp.GotoTop()
 }
 
 // filterRows keeps the rows whose name or command contains q. Matching is
@@ -220,6 +246,7 @@ func (m *Model) resize(w, h int) {
 	m.layout()
 	m.setContent()
 	m.vp.SetYOffset(m.vp.YOffset()) // clamps into range
+	m.showCursor()                  // rows may have changed height
 	m.ready = true
 }
 
@@ -253,11 +280,13 @@ func (m *Model) setHelp(on bool) {
 }
 
 func (m *Model) setContent() {
-	s := renderTable(m.rows, m.nameW, m.width)
+	w := m.width - 1 // the cursor gutter takes one column
+	s, spans := renderTable(m.rows, m.nameW, w)
 	if len(m.rows) == 0 && len(m.all) > 0 {
 		msg := lipgloss.NewStyle().Foreground(colorDim).Render("no aliases match the filter")
-		s += "\n\n" + lipgloss.PlaceHorizontal(m.width, lipgloss.Center, msg)
+		s += "\n\n" + lipgloss.PlaceHorizontal(w, lipgloss.Center, msg)
 	}
+	m.spans = spans
 	m.vp.SetContent(s)
 }
 
@@ -321,6 +350,13 @@ func (m *Model) footer() string {
 	// The keys come first: if the line is too long, the status gives way.
 	keys := m.help.ShortHelpView(m.keys.ShortHelp())
 	room := m.width - lipgloss.Width(keys)
+	if m.toast != "" {
+		status := lipgloss.NewStyle().Foreground(colorAccent).Render(" ✓ "+m.toast) + "  "
+		if room > 0 {
+			keys = lipgloss.NewStyle().MaxWidth(room).Render(status) + keys
+		}
+		return m.withFullHelp(lipgloss.NewStyle().MaxWidth(m.width).Render(keys))
+	}
 	head := " " + count
 	if m.query != "" {
 		head += " · /" + highlight.Sanitize(m.query)
@@ -338,7 +374,11 @@ func (m *Model) footer() string {
 		status = ""
 	}
 
-	line := lipgloss.NewStyle().MaxWidth(m.width).Render(status + keys)
+	return m.withFullHelp(lipgloss.NewStyle().MaxWidth(m.width).Render(status + keys))
+}
+
+// withFullHelp puts the `?` help above the status line when it is open.
+func (m *Model) withFullHelp(line string) string {
 	if m.fullHelpFits() {
 		return lipgloss.JoinVertical(lipgloss.Left, m.fullHelp(), line)
 	}

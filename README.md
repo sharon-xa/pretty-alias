@@ -59,15 +59,19 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 
 | Key | Action |
 |---|---|
-| `↑` / `k`, `↓` / `j` | Scroll one line |
-| `pgup` / `b`, `pgdn` / `f` / `space` | Scroll one page |
+| `↑` / `k`, `↓` / `j` | Select the previous / next alias (the view follows) |
+| `pgup` / `b`, `pgdn` / `f` / `space` | Scroll one page (the selection comes along) |
 | `ctrl+u`, `ctrl+d` | Scroll half a page |
-| `g` / `home`, `G` / `end` | Top / bottom |
-| Mouse wheel | Scroll. The mouse is not captured, so you can still select and copy text; the terminal turns the wheel into `↑`/`↓` (most do by default, plain xterm doesn't). |
+| `g` / `home`, `G` / `end` | First / last alias |
+| `y` / `enter` | Copy the selected alias's command to the clipboard |
+| `Y` | Copy the selected alias's name |
+| Mouse wheel | Move the selection. The mouse is not captured, so you can still select and copy text; the terminal turns the wheel into `↑`/`↓` (most do by default, plain xterm doesn't). |
 | `/` | Filter: type to show only aliases whose name or command contains the text (case-insensitive unless it has a capital letter). `enter` keeps the filter, `esc` clears it. While typing, every letter goes into the filter. |
-| `?` | Show or hide every key binding (the footer only lists `/`, `?` and `q`) |
+| `?` | Show or hide every key binding (the footer only lists `/`, `y`, `?` and `q`) |
 | `esc` | Close the `?` help, or else clear the filter |
 | `q` / `ctrl+c` | Quit (`ctrl+c` also works while typing a filter) |
+
+Copying uses OSC 52, so it works over SSH too, but not every terminal supports it. Inside tmux it needs `set -g set-clipboard on` in `~/.tmux.conf` (tmux's default, `external`, drops it). The text is copied as shown: control characters in a command appear as symbols such as `␊`, so pasting it can't run anything by surprise.
 
 ### Environment
 

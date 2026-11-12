@@ -1,13 +1,9 @@
 package tui
 
-import (
-	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/viewport"
-)
+import "charm.land/bubbles/v2/key"
 
-// keyMap is the single source of truth for key bindings. The footer, the `?`
-// help and the viewport's scrolling all read from it, so adding a binding here
-// is all it takes to make it work and show up in the help.
+// keyMap is the single source of truth for key bindings. Update and the footer
+// and `?` help all read from it.
 type keyMap struct {
 	Up       key.Binding
 	Down     key.Binding
@@ -18,6 +14,10 @@ type keyMap struct {
 	Top      key.Binding
 	Bottom   key.Binding
 	Quit     key.Binding
+
+	// Copy puts the selected row's command on the clipboard, CopyName its name.
+	Copy     key.Binding
+	CopyName key.Binding
 
 	// Help toggles the full help; CloseHelp is esc, which also closes it.
 	Help      key.Binding
@@ -37,8 +37,8 @@ type keyMap struct {
 
 func newKeyMap() keyMap {
 	return keyMap{
-		Up:     key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
-		Down:   key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+		Up:     key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "previous")),
+		Down:   key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "next")),
 		PageUp: key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup", "page up")),
 		PageDown: key.NewBinding(
 			key.WithKeys("pgdown", "f", "space"),
@@ -49,6 +49,9 @@ func newKeyMap() keyMap {
 		Top:      key.NewBinding(key.WithKeys("g", "home"), key.WithHelp("g", "top")),
 		Bottom:   key.NewBinding(key.WithKeys("G", "end"), key.WithHelp("G", "bottom")),
 		Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+
+		Copy:     key.NewBinding(key.WithKeys("y", "enter"), key.WithHelp("y", "copy")),
+		CopyName: key.NewBinding(key.WithKeys("Y"), key.WithHelp("Y", "copy name")),
 
 		Help: key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 		CloseHelp: key.NewBinding(
@@ -71,36 +74,22 @@ func newKeyMap() keyMap {
 }
 
 // ShortHelp implements help.KeyMap (the one-line footer). It is kept short
-// enough to fit in 60 columns; scrolling keys are only in the full help.
+// enough to fit in 60 columns; movement keys are only in the full help.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Filter, k.ClearFilter, k.Help, k.Quit}
+	return []key.Binding{k.Filter, k.ClearFilter, k.Copy, k.Help, k.Quit}
 }
 
-// FullHelp implements help.KeyMap (the `?` view).
+// FullHelp implements help.KeyMap (the `?` view). It fits in 80 columns.
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.HalfUp, k.HalfDown, k.Top, k.Bottom},
-		{k.Filter, k.ClearFilter, k.Help, k.Quit},
+		{k.Copy, k.CopyName, k.Filter, k.ClearFilter},
+		{k.Help, k.Quit},
 	}
 }
 
 // filterHelp is the footer help while the filter input has focus.
 func (k keyMap) filterHelp() []key.Binding {
 	return []key.Binding{k.FilterAccept, k.FilterCancel}
-}
-
-// viewportKeys maps our bindings onto the viewport component.
-func (k keyMap) viewportKeys() viewport.KeyMap {
-	return viewport.KeyMap{
-		Up:           k.Up,
-		Down:         k.Down,
-		PageUp:       k.PageUp,
-		PageDown:     k.PageDown,
-		HalfPageUp:   k.HalfUp,
-		HalfPageDown: k.HalfDown,
-		// Left/Right are for horizontal scrolling, which we don't use.
-		Left:  key.NewBinding(key.WithDisabled()),
-		Right: key.NewBinding(key.WithDisabled()),
-	}
 }
