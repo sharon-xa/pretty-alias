@@ -6,7 +6,8 @@
 main.go                     thin: os.Exit(app.Run(...)). Lives in the module root so that
                             `go install github.com/sharon-xa/pretty-alias/v2@latest` works.
 internal/
-  app/        composition root: flags, wiring, exit codes, logging, plain output
+  app/        composition root: flags, wiring, exit codes, logging, plain output,
+              shell completion scripts
   shell/      Shell type (bash|zsh|fish), detection from $SHELL, rc-file paths
   alias/      Alias type, shell-word tokenizer, per-dialect parsers, file loading
   highlight/  Chroma wrapper: lexer per shell, Sanitize() for untrusted text
@@ -55,6 +56,7 @@ app ──► tui ──► highlight ──► shell
 | Copy to clipboard, selection (#28) | Done: `tui/cursor.go`. `renderTable` returns each row's line span; the cursor is drawn in the viewport's gutter, so moving it never re-renders the table |
 | Sorting (#29) | Done: `alias.Order` (`Sort`, `Key`) shared by `--sort` for `--plain` and the TUI's `SetOrder` (`tui/order.go`). Grouping under headings belongs with categories (#38); grouping by file with #31 |
 | Theme / colors (#30) | Done: `--theme` in `app`, themes in `highlight` (`AutoTheme` uses Chroma's light/dark counterpart pairs), UI palette in `tui/table.go` (`newPalette`), detection in `tui/colors.go` |
+| CLI flags, shell completion (#35) | Done: flags in `app.Run` (stdlib `flag`). `--completion` (`app/completion.go`) builds the bash/zsh/fish scripts from the `FlagSet` itself; a new flag with fixed values only needs an entry in `completionValues` |
 | New key bindings | `tui/keys.go`: add it to `keyMap` and `FullHelp()` (the `?` view, 4 columns that fit in 80). `ShortHelp()` (the footer) stays at `/`, `y`, `?`, `q` so it fits in 60 columns |
 | Diagnostics: duplicates, shadowing (#40) | new package `internal/lint` taking `[]alias.Alias` |
 | Add/edit/delete (#43) | new package `internal/edit`, using `Alias.File`/`Line`; `tui` only emits intents |

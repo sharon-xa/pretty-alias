@@ -75,7 +75,7 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 		sortFlag = fs.String(
 			"sort",
 			"file",
-			"order: file (as defined), name or command; s cycles it in the table",
+			"sort order: file (as defined), name or command; s cycles it in the table",
 		)
 		themeFlag = fs.String(
 			"theme",
@@ -83,7 +83,12 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 			"syntax highlighting theme: auto (monokai, or monokailight on light\n"+
 				"backgrounds) or any Chroma style name, e.g. dracula, nord, github",
 		)
-		versFlag = fs.Bool("version", false, "print the version and exit")
+		versFlag       = fs.Bool("version", false, "print the version and exit")
+		completionFlag = fs.String(
+			"completion",
+			"",
+			"print a shell completion script: bash, zsh or fish",
+		)
 	)
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -95,6 +100,16 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 		outf(stderr, "pretty-alias: unexpected argument %q\n", fs.Arg(0))
 		fs.Usage()
 		return ExitUsage
+	}
+	if *completionFlag != "" {
+		sh, err := shell.Parse(*completionFlag)
+		if err != nil {
+			outf(stderr, "pretty-alias: --completion: unknown shell %q (want bash, zsh or fish)\n",
+				*completionFlag)
+			return ExitUsage
+		}
+		outs(stdout, completionScript(sh, flagSpecs(fs, completionValues(), "file")))
+		return ExitOK
 	}
 	if *versFlag {
 		outf(stdout, "pretty-alias %s\n", Version(version))
@@ -159,6 +174,27 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 		return fail(stderr, err)
 	}
 	return ExitOK
+}
+
+// completionValues lists the fixed values of each flag that has them.
+func completionValues() map[string][]string {
+	var shells, orders []string
+	for _, s := range shell.All {
+		shells = append(shells, string(s))
+	}
+	for _, o := range alias.Orders {
+		orders = append(orders, string(o))
+	}
+	themes := []string{"auto"}
+	for _, t := range highlight.Themes() {
+		themes = append(themes, strings.ToLower(t))
+	}
+	return map[string][]string{
+		"shell":      shells,
+		"completion": shells,
+		"sort":       orders,
+		"theme":      themes,
+	}
 }
 
 // themes returns the highlight theme to use on dark and on light backgrounds

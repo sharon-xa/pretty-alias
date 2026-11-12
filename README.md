@@ -46,6 +46,7 @@ pretty-alias --plain | grep git      # no TUI: one "name<TAB>command" line per a
 pretty-alias --plain --sort name    # alphabetical
 pretty-alias --theme dracula        # pick the highlighting theme
 pretty-alias --version
+pretty-alias --completion zsh       # print a shell completion script
 ```
 
 | Flag | Meaning |
@@ -56,8 +57,29 @@ pretty-alias --version
 | `--sort file\|name\|command` | Order of the aliases: as defined in the file (default), by name, or by command (which puts all the `git …` aliases together). Case is ignored. Also applies to `--plain`. |
 | `--theme NAME` | Syntax highlighting theme. Default `auto`: `monokai`, or `monokailight` when the terminal reports a light background. Any [Chroma style](https://xyproto.github.io/splash/docs/) works, e.g. `dracula`, `nord`, `github`; an unknown name prints the full list. |
 | `--version` | Print the version. |
+| `--completion bash\|zsh\|fish` | Print a completion script for that shell (see below). |
 
 Exit codes: `0` success (also when no aliases are found, which is reported on stderr), `1` error (unreadable file, unsupported shell), `2` bad usage.
+
+### Shell completion
+
+`--completion` prints a script that completes the flags and their values (shells, sort orders, theme names, and file paths for `--file`). Install it once:
+
+```sh
+# bash (needs the bash-completion package; or put `source <(pretty-alias --completion bash)` in ~/.bashrc)
+mkdir -p ~/.local/share/bash-completion/completions
+pretty-alias --completion bash > ~/.local/share/bash-completion/completions/pretty-alias
+
+# zsh: any directory in $fpath, added before `compinit` runs in ~/.zshrc,
+# e.g. `fpath=(~/.zfunc $fpath)`; or put `source <(pretty-alias --completion zsh)` after compinit
+mkdir -p ~/.zfunc
+pretty-alias --completion zsh > ~/.zfunc/_pretty-alias
+
+# fish
+pretty-alias --completion fish > ~/.config/fish/completions/pretty-alias.fish
+```
+
+Regenerate it after upgrading so new flags and themes are included.
 
 ### Keys
 
