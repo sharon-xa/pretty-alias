@@ -108,6 +108,53 @@ COMP_WORDS=("$@"); COMP_CWORD=$(($# - 1)); _pretty_alias; echo "${COMPREPLY[*]}"
 	}
 }
 
+// TestFishCompletion asks fish for the candidates of each command line
+// (complete -C), which works without a terminal.
+func TestFishCompletion(t *testing.T) {
+	fish, err := exec.LookPath("fish")
+	if err != nil {
+		t.Skip("fish not installed")
+	}
+	dir := t.TempDir()
+	_, script, _ := run(t, nil, "--completion", "fish")
+	scriptFile := filepath.Join(dir, "pretty-alias.fish")
+	if err := os.WriteFile(scriptFile, []byte(script), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "zshrc"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct{ line, want string }{
+		{"--s", "--shell --sort"},
+		{"--plain --ver", "--version"},
+		{"--shell ", "bash fish zsh"},
+		{"--shell=z", "--shell=zsh"},
+		{"--sort c", "command"},
+		{"--theme drac", "dracula"},
+		{"--completion f", "fish"},
+		{"--file " + filepath.Join(dir, "z"), filepath.Join(dir, "zshrc")},
+		{"", ""}, // no positional arguments
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			cmd := exec.Command(
+				fish,
+				"--no-config",
+				"-c",
+				`source $argv[1]; complete -C $argv[2] | string replace -r '\t.*' '' | string join ' '`,
+				scriptFile,
+				"pretty-alias "+tt.line,
+			)
+			// The exit status is ignored: string join exits 1 for fewer than two
+			// items. A fish error still fails the test through the output.
+			out, _ := cmd.CombinedOutput()
+			if got := strings.TrimSpace(string(out)); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCompletionUnknownShellIsAUsageError(t *testing.T) {
 	code, out, errs := run(t, nil, "--completion", "tcsh")
 	if code != ExitUsage || out != "" || !strings.Contains(errs, `unknown shell "tcsh"`) {
