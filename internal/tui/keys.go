@@ -18,6 +18,17 @@ type keyMap struct {
 	Top      key.Binding
 	Bottom   key.Binding
 	Quit     key.Binding
+
+	// Filter opens the filter input; ClearFilter drops an active filter and
+	// is only enabled while one is applied.
+	Filter      key.Binding
+	ClearFilter key.Binding
+
+	// While the filter input has focus every printable key is text, so only
+	// these are commands.
+	FilterAccept    key.Binding
+	FilterCancel    key.Binding
+	FilterForceQuit key.Binding
 }
 
 func newKeyMap() keyMap {
@@ -33,13 +44,24 @@ func newKeyMap() keyMap {
 		HalfDown: key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "half page down")),
 		Top:      key.NewBinding(key.WithKeys("g", "home"), key.WithHelp("g", "top")),
 		Bottom:   key.NewBinding(key.WithKeys("G", "end"), key.WithHelp("G", "bottom")),
-		Quit:     key.NewBinding(key.WithKeys("q", "esc", "ctrl+c"), key.WithHelp("q", "quit")),
+		Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+
+		Filter: key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
+		ClearFilter: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "clear filter"),
+			key.WithDisabled(),
+		),
+
+		FilterAccept:    key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "keep")),
+		FilterCancel:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear")),
+		FilterForceQuit: key.NewBinding(key.WithKeys("ctrl+c")),
 	}
 }
 
 // ShortHelp implements help.KeyMap (the one-line footer).
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.PageDown, k.Top, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.PageDown, k.Top, k.Filter, k.ClearFilter, k.Quit}
 }
 
 // FullHelp implements help.KeyMap (reserved for a future `?` overlay).
@@ -47,8 +69,13 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.HalfUp, k.HalfDown, k.Top, k.Bottom},
-		{k.Quit},
+		{k.Filter, k.ClearFilter, k.Quit},
 	}
+}
+
+// filterHelp is the footer help while the filter input has focus.
+func (k keyMap) filterHelp() []key.Binding {
+	return []key.Binding{k.FilterAccept, k.FilterCancel}
 }
 
 // viewportKeys maps our bindings onto the viewport component.

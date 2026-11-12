@@ -23,6 +23,7 @@ const (
 type row struct {
 	name    string // sanitized
 	command string // sanitized + highlighted (may contain ANSI codes)
+	text    string // sanitized, unhighlighted command, for filtering
 }
 
 // renderTable lays the rows out for a terminal of the given width. It is pure

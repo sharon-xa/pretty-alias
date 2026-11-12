@@ -63,7 +63,9 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 | `pgup` / `b`, `pgdn` / `f` / `space` | Scroll one page |
 | `ctrl+u`, `ctrl+d` | Scroll half a page |
 | `g` / `home`, `G` / `end` | Top / bottom |
-| `q` / `esc` / `ctrl+c` | Quit |
+| `/` | Filter: type to show only aliases whose name or command contains the text (case-insensitive unless it has a capital letter). `enter` keeps the filter, `esc` clears it. While typing, every letter goes into the filter. |
+| `esc` | Clear the filter |
+| `q` / `ctrl+c` | Quit (`ctrl+c` also works while typing a filter) |
 
 ### Environment
 
