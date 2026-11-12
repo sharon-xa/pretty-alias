@@ -18,8 +18,12 @@ func sample(n int) []alias.Alias {
 	out := make([]alias.Alias, n)
 	for i := range out {
 		out[i] = alias.Alias{
-			Name:    fmt.Sprintf("a%04d", i),
-			Command: fmt.Sprintf("echo %d && some-long-command --with --many --flags --so-it-wraps-when-narrow --index=%d", i, i),
+			Name: fmt.Sprintf("a%04d", i),
+			Command: fmt.Sprintf(
+				"echo %d && some-long-command --with --many --flags --so-it-wraps-when-narrow --index=%d",
+				i,
+				i,
+			),
 		}
 	}
 	return out
@@ -71,7 +75,8 @@ func TestViewShowsHeaderRowsAndFooter(t *testing.T) {
 	m := newModel(t, 5)
 	send(m, size(100, 30))
 	v := m.content()
-	for _, want := range []string{"ALIAS", "COMMAND", "a0000", "a0004", "5 aliases", "~/.bashrc", "quit"} {
+	wants := []string{"ALIAS", "COMMAND", "a0000", "a0004", "5 aliases", "~/.bashrc", "quit"}
+	for _, want := range wants {
 		if !strings.Contains(v, want) {
 			t.Errorf("View missing %q:\n%s", want, v)
 		}
@@ -153,7 +158,11 @@ func TestResizeWhileScrolledDoesNotPanic(t *testing.T) {
 	tall := m.vp.TotalLineCount()
 	send(m, size(200, 20))
 	if m.vp.TotalLineCount() >= tall {
-		t.Fatalf("test premise broken: table did not shrink (%d -> %d)", tall, m.vp.TotalLineCount())
+		t.Fatalf(
+			"test premise broken: table did not shrink (%d -> %d)",
+			tall,
+			m.vp.TotalLineCount(),
+		)
 	}
 	if max := m.vp.TotalLineCount() - m.vp.Height(); m.vp.YOffset() > max {
 		t.Errorf("offset %d beyond max %d after resize", m.vp.YOffset(), max)
@@ -187,7 +196,8 @@ func TestHostileContentIsNeutralised(t *testing.T) {
 		m := New(as, highlight.New(shell.Bash, p), "x")
 		send(m, size(100, 20))
 		v := m.content()
-		if strings.Contains(v, "\x1b[2J") || strings.Contains(v, "\x1b]0;") || strings.Contains(v, "\x07") {
+		if strings.Contains(v, "\x1b[2J") || strings.Contains(v, "\x1b]0;") ||
+			strings.Contains(v, "\x07") {
 			t.Errorf("%s: raw escape sequence reached the screen: %q", p, v)
 		}
 	}

@@ -56,9 +56,24 @@ func TestParse(t *testing.T) {
 		{"bare alias word", shell.Bash, "alias", nil},
 
 		// --- issue #4: no value
-		{"bash no value", shell.Bash, "alias foo\nalias -p\nalias bar baz\nalias ok=1", []string{"ok=1"}},
-		{"zsh no value", shell.Zsh, "alias foo\nalias -L\nalias -m 'g*'\nalias ok=1", []string{"ok=1"}},
-		{"fish no value", shell.Fish, "alias\nalias x\nalias onlyname\nalias ok 'ls'", []string{"ok=ls"}},
+		{
+			"bash no value",
+			shell.Bash,
+			"alias foo\nalias -p\nalias bar baz\nalias ok=1",
+			[]string{"ok=1"},
+		},
+		{
+			"zsh no value",
+			shell.Zsh,
+			"alias foo\nalias -L\nalias -m 'g*'\nalias ok=1",
+			[]string{"ok=1"},
+		},
+		{
+			"fish no value",
+			shell.Fish,
+			"alias\nalias x\nalias onlyname\nalias ok 'ls'",
+			[]string{"ok=ls"},
+		},
 		{"spaces around equals", shell.Bash, `alias a = 'b'`, nil},
 
 		// --- issue #8: several per line
@@ -81,7 +96,12 @@ func TestParse(t *testing.T) {
 		{"double dash name", shell.Bash, `alias -- --help='echo x'`, []string{"--help=echo x"}},
 		{"fish save", shell.Fish, `alias --save ll 'ls -la'`, []string{"ll=ls -la"}},
 		{"fish -s", shell.Fish, `alias -s gs 'git status'`, []string{"gs=git status"}},
-		{"fish description", shell.Fish, `alias --description 'list files' lst 'ls -l'`, []string{"lst=ls -l"}},
+		{
+			"fish description",
+			shell.Fish,
+			`alias --description 'list files' lst 'ls -l'`,
+			[]string{"lst=ls -l"},
+		},
 
 		// --- issue #11: quotes and escapes
 		{"dq inside sq", shell.Bash, `alias a='echo "hi there"'`, []string{`a=echo "hi there"`}},
@@ -105,14 +125,24 @@ func TestParse(t *testing.T) {
 
 		// --- issue #12: comments
 		{"trailing comment", shell.Bash, `alias ll='ls -la' # list files`, []string{"ll=ls -la"}},
-		{"hash in quotes", shell.Bash, `alias a='echo "a # b"' # real comment`, []string{`a=echo "a # b"`}},
+		{
+			"hash in quotes",
+			shell.Bash,
+			`alias a='echo "a # b"' # real comment`,
+			[]string{`a=echo "a # b"`},
+		},
 		{"hash in unquoted word", shell.Bash, `alias a=b#c`, []string{"a=b#c"}},
 		{"comment after bare", shell.Bash, `alias u=ls # note`, []string{"u=ls"}},
 
 		// --- fish forms
 		{"fish space", shell.Fish, `alias ll 'ls -la'`, []string{"ll=ls -la"}},
 		{"fish equals", shell.Fish, `alias ll='ls -la'`, []string{"ll=ls -la"}},
-		{"fish bare words joined", shell.Fish, `alias a5 echo unquoted words`, []string{"a5=echo unquoted words"}},
+		{
+			"fish bare words joined",
+			shell.Fish,
+			`alias a5 echo unquoted words`,
+			[]string{"a5=echo unquoted words"},
+		},
 		{"fish env prefix", shell.Fish, `alias a7 FOO=bar env`, []string{"a7=FOO=bar env"}},
 		{"fish equals inside quoted", shell.Fish, `alias a10 'echo a=b'`, []string{"a10=echo a=b"}},
 		{"fish empty value", shell.Fish, `alias a17 ''`, []string{"a17="}},
@@ -124,7 +154,12 @@ func TestParse(t *testing.T) {
 		{"bom", shell.Bash, utf8BOM + "alias a=1\nalias b=2", []string{"a=1", "b=2"}},
 		{"no trailing newline", shell.Bash, "alias a=1\nalias b=2", []string{"a=1", "b=2"}},
 		{"duplicates kept", shell.Bash, "alias a=1\nalias a=2", []string{"a=1", "a=2"}},
-		{"invalid utf8 survives", shell.Bash, "alias a=\"echo \xc3\x28\"", []string{"a=echo \xc3\x28"}},
+		{
+			"invalid utf8 survives",
+			shell.Bash,
+			"alias a=\"echo \xc3\x28\"",
+			[]string{"a=echo \xc3\x28"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -292,7 +327,8 @@ func TestSpecificFixtureContents(t *testing.T) {
 	})
 	t.Run("flags are not names", func(t *testing.T) {
 		for _, a := range load(t, shell.Zsh, "edge/flags.zshrc") {
-			if strings.HasPrefix(a.Name, "-g") || strings.HasPrefix(a.Name, "-s") || strings.Contains(a.Name, " ") {
+			if strings.HasPrefix(a.Name, "-g") || strings.HasPrefix(a.Name, "-s") ||
+				strings.Contains(a.Name, " ") {
 				t.Errorf("flag leaked into name: %q", a.Name)
 			}
 		}

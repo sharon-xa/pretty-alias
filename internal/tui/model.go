@@ -128,8 +128,9 @@ func (m *Model) content() string {
 func (m *Model) showFooter() bool { return m.height > footerHeight+1 }
 
 func (m *Model) footer() string {
+	pct := m.vp.ScrollPercent() * 100
 	status := lipgloss.NewStyle().Foreground(colorDim).
-		Render(fmt.Sprintf(" %d aliases · %s · %3.0f%%  ", len(m.rows), m.source, m.vp.ScrollPercent()*100))
+		Render(fmt.Sprintf(" %d aliases · %s · %3.0f%%  ", len(m.rows), m.source, pct))
 	line := status + m.help.ShortHelpView(m.keys.ShortHelp())
 	return lipgloss.NewStyle().MaxWidth(m.width).Render(line)
 }

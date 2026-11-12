@@ -129,10 +129,12 @@ func TestInstallSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(string(script), "#!/bin/sh") || !strings.Contains(string(script), "set -eu") {
+	if !strings.HasPrefix(string(script), "#!/bin/sh") ||
+		!strings.Contains(string(script), "set -eu") {
 		t.Error("install.sh must be POSIX sh with `set -eu`")
 	}
-	if strings.Contains(string(script), "curl -Lo") || strings.Contains(string(script), "curl -L ") {
+	if strings.Contains(string(script), "curl -Lo") ||
+		strings.Contains(string(script), "curl -L ") {
 		t.Error("curl must always be called with -f (the original bug)")
 	}
 }
@@ -141,8 +143,10 @@ func TestInstallVerifiedRelease(t *testing.T) {
 	asset := platformAsset(t)
 	bin := fakeBinary()
 	srv := server(t, map[string][]byte{
-		asset:           bin,
-		"checksums.txt": checksums(map[string][]byte{asset: bin, "pretty-alias-other-os": []byte("x")}),
+		asset: bin,
+		"checksums.txt": checksums(
+			map[string][]byte{asset: bin, "pretty-alias-other-os": []byte("x")},
+		),
 	})
 
 	r := runInstaller(t, srv, fakeTag)
@@ -170,7 +174,10 @@ func TestInstallVerifiedRelease(t *testing.T) {
 func TestInstallAcceptsVersionWithoutV(t *testing.T) {
 	asset := platformAsset(t)
 	bin := fakeBinary()
-	srv := server(t, map[string][]byte{asset: bin, "checksums.txt": checksums(map[string][]byte{asset: bin})})
+	srv := server(
+		t,
+		map[string][]byte{asset: bin, "checksums.txt": checksums(map[string][]byte{asset: bin})},
+	)
 	if r := runInstaller(t, srv, strings.TrimPrefix(fakeTag, "v")); r.err != nil {
 		t.Fatalf("install of bare version failed: %v\n%s", r.err, r.errOut)
 	}
@@ -215,7 +222,9 @@ func TestInstallRejectsMissingChecksumEntry(t *testing.T) {
 // A correct checksum of an HTML error page must still be rejected.
 func TestInstallRejectsNonExecutable(t *testing.T) {
 	asset := platformAsset(t)
-	page := []byte("<!DOCTYPE html><html><body>Not Found</body></html>" + strings.Repeat(" ", 200000))
+	page := []byte(
+		"<!DOCTYPE html><html><body>Not Found</body></html>" + strings.Repeat(" ", 200000),
+	)
 	srv := server(t, map[string][]byte{
 		asset:           page,
 		"checksums.txt": checksums(map[string][]byte{asset: page}),
@@ -226,7 +235,10 @@ func TestInstallRejectsNonExecutable(t *testing.T) {
 func TestInstallRejectsTinyFile(t *testing.T) {
 	asset := platformAsset(t)
 	tiny := []byte{0x7f, 'E', 'L', 'F', 1, 2, 3}
-	srv := server(t, map[string][]byte{asset: tiny, "checksums.txt": checksums(map[string][]byte{asset: tiny})})
+	srv := server(
+		t,
+		map[string][]byte{asset: tiny, "checksums.txt": checksums(map[string][]byte{asset: tiny})},
+	)
 	wantFailure(t, runInstaller(t, srv, fakeTag), "not a valid executable")
 }
 
@@ -262,7 +274,10 @@ func TestInstallLegacyReleaseOtherPlatformsFailClearly(t *testing.T) {
 func TestInstallReplacesExistingBinaryAtomically(t *testing.T) {
 	asset := platformAsset(t)
 	bin := fakeBinary()
-	srv := server(t, map[string][]byte{asset: bin, "checksums.txt": checksums(map[string][]byte{asset: bin})})
+	srv := server(
+		t,
+		map[string][]byte{asset: bin, "checksums.txt": checksums(map[string][]byte{asset: bin})},
+	)
 
 	r := runInstaller(t, srv, fakeTag)
 	if r.err != nil {
@@ -270,7 +285,12 @@ func TestInstallReplacesExistingBinaryAtomically(t *testing.T) {
 	}
 	// Second run into the same directory must replace, not fail or leave temp files.
 	cmd := exec.Command("sh", "install.sh")
-	cmd.Env = append(os.Environ(), "PRETTY_ALIAS_BASE_URL="+srv.URL, "PRETTY_ALIAS_VERSION="+fakeTag, "INSTALL_DIR="+r.dir)
+	cmd.Env = append(
+		os.Environ(),
+		"PRETTY_ALIAS_BASE_URL="+srv.URL,
+		"PRETTY_ALIAS_VERSION="+fakeTag,
+		"INSTALL_DIR="+r.dir,
+	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("re-install failed: %v\n%s", err, out)
 	}

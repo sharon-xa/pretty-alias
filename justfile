@@ -88,9 +88,9 @@ smoke filter="":
     done < <(cd "$root" && find testdata -type f ! -name README.md ! -path 'testdata/gen/*' | sort)
     echo "---- ok/empty: $pass   failing: $fail"
 
-# format all Go code
+# format all Go code (gofumpt + golines, configured in .golangci.yml)
 fmt:
-    gofumpt -l -w .
+    golangci-lint fmt ./...
 
 # go vet
 vet:
@@ -113,9 +113,8 @@ cover:
     go test -coverprofile=coverage.out ./...
     go tool cover -func=coverage.out | tail -n 1
 
-# everything CI should run: format check, vet, lint, race tests
+# everything CI runs: vet, lint (also fails on unformatted code or lines over 100 cols), race tests
 check: vet lint race
-    @test -z "$(gofumpt -l .)" || (echo "gofumpt: unformatted files:"; gofumpt -l .; exit 1)
 
 # tidy modules and verify
 tidy:

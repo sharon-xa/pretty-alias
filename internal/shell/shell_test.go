@@ -61,7 +61,8 @@ func TestErrorMessagesAreActionable(t *testing.T) {
 		t.Errorf("empty $SHELL error should mention --shell: %v", err)
 	}
 	_, err = Parse("/bin/sh")
-	if err == nil || !contains(err.Error(), "bash, zsh, fish") || !contains(err.Error(), "/bin/sh") {
+	if err == nil || !contains(err.Error(), "bash, zsh, fish") ||
+		!contains(err.Error(), "/bin/sh") {
 		t.Errorf("unsupported error should name the shell and the supported ones: %v", err)
 	}
 }

@@ -71,7 +71,12 @@ func TestCommand(t *testing.T) {
 				t.Errorf("%s/%s: expected %q in %q", sh, tt.profile, tt.want, out)
 			}
 			if tt.profile == colorprofile.ANSI && strings.Contains(out, "38;") {
-				t.Errorf("%s/%s: 256/true-colour codes in 16-colour output: %q", sh, tt.profile, out)
+				t.Errorf(
+					"%s/%s: 256/true-colour codes in 16-colour output: %q",
+					sh,
+					tt.profile,
+					out,
+				)
 			}
 			if strings.HasSuffix(out, "\n") {
 				t.Errorf("%s/%s: trailing newline in %q", sh, tt.profile, out)

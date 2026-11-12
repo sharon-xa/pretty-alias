@@ -17,10 +17,12 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: gofmt
-        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - name: vet
         run: go vet ./...
+      - name: lint (golangci-lint, incl. gofumpt + golines format check)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
       - name: test
         run: go test -race -count=1 ./...
       - name: build

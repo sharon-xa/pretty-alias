@@ -27,7 +27,10 @@ func (e *UnsupportedError) Error() string {
 	if e.Name == "" {
 		return "cannot detect your shell ($SHELL is empty); pass --shell bash|zsh|fish"
 	}
-	return fmt.Sprintf("unsupported shell %q (supported: bash, zsh, fish); pass --shell to override", e.Name)
+	return fmt.Sprintf(
+		"unsupported shell %q (supported: bash, zsh, fish); pass --shell to override",
+		e.Name,
+	)
 }
 
 // Parse converts a shell name or executable path ("zsh", "/usr/bin/fish")

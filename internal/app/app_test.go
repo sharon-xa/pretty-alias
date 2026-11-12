@@ -41,7 +41,14 @@ func TestPlainOutputFromFixtures(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.file, func(t *testing.T) {
-			code, out, errs := run(t, nil, "--shell", tt.shell, "--file", filepath.Join(testdata, tt.file))
+			code, out, errs := run(
+				t,
+				nil,
+				"--shell",
+				tt.shell,
+				"--file",
+				filepath.Join(testdata, tt.file),
+			)
 			if code != ExitOK {
 				t.Fatalf("exit %d, stderr: %s", code, errs)
 			}
@@ -62,7 +69,15 @@ func TestPlainOutputFromFixtures(t *testing.T) {
 }
 
 func TestPlainFlagForcesPlain(t *testing.T) {
-	code, out, _ := run(t, nil, "--plain", "--shell", "bash", "--file", filepath.Join(testdata, "minimal/bashrc"))
+	code, out, _ := run(
+		t,
+		nil,
+		"--plain",
+		"--shell",
+		"bash",
+		"--file",
+		filepath.Join(testdata, "minimal/bashrc"),
+	)
 	if code != ExitOK || out != "ll\tls -la\n" {
 		t.Errorf("code %d, out %q", code, out)
 	}
@@ -72,7 +87,8 @@ func TestEveryFixtureRunsWithoutCrashing(t *testing.T) {
 	// The whole point of the rewrite: no input file may make the program panic.
 	shells := map[string]string{"zshrc": "zsh", "fish": "fish"}
 	err := filepath.WalkDir(testdata, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || strings.HasSuffix(path, ".md") || strings.Contains(path, "/gen/") {
+		if err != nil || d.IsDir() || strings.HasSuffix(path, ".md") ||
+			strings.Contains(path, "/gen/") {
 			return err
 		}
 		sh := "bash"
@@ -98,7 +114,14 @@ func TestEveryFixtureRunsWithoutCrashing(t *testing.T) {
 }
 
 func TestNoAliasesIsNotAnError(t *testing.T) {
-	code, out, errs := run(t, nil, "--shell", "bash", "--file", filepath.Join(testdata, "empty/bashrc"))
+	code, out, errs := run(
+		t,
+		nil,
+		"--shell",
+		"bash",
+		"--file",
+		filepath.Join(testdata, "empty/bashrc"),
+	)
 	if code != ExitOK {
 		t.Errorf("exit %d, want 0", code)
 	}
@@ -119,11 +142,35 @@ func TestErrorsAreReportedOnStderr(t *testing.T) {
 		wantCode int
 		wantErr  string
 	}{
-		{"missing file", nil, []string{"--shell", "bash", "--file", missing}, ExitError, "no such file"},
-		{"unsupported $SHELL", map[string]string{"SHELL": "/bin/sh"}, []string{"--file", missing}, ExitError, "unsupported shell"},
+		{
+			"missing file",
+			nil,
+			[]string{"--shell", "bash", "--file", missing},
+			ExitError,
+			"no such file",
+		},
+		{
+			"unsupported $SHELL",
+			map[string]string{"SHELL": "/bin/sh"},
+			[]string{"--file", missing},
+			ExitError,
+			"unsupported shell",
+		},
 		{"empty $SHELL", nil, []string{"--file", missing}, ExitError, "--shell"},
-		{"bad --shell", nil, []string{"--shell", "nu", "--file", missing}, ExitError, "unsupported shell"},
-		{"home without rc", map[string]string{"SHELL": "/bin/bash", "HOME": t.TempDir()}, nil, ExitError, ".bashrc"},
+		{
+			"bad --shell",
+			nil,
+			[]string{"--shell", "nu", "--file", missing},
+			ExitError,
+			"unsupported shell",
+		},
+		{
+			"home without rc",
+			map[string]string{"SHELL": "/bin/bash", "HOME": t.TempDir()},
+			nil,
+			ExitError,
+			".bashrc",
+		},
 		{"unknown flag", nil, []string{"--nope"}, ExitUsage, "flag provided but not defined"},
 		{"stray argument", nil, []string{"extra"}, ExitUsage, "unexpected argument"},
 	}
@@ -145,7 +192,11 @@ func TestErrorsAreReportedOnStderr(t *testing.T) {
 
 func TestDetectsShellAndFileFromEnvironment(t *testing.T) {
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, ".zshrc"), []byte("alias hi='echo hello'\n"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(home, ".zshrc"),
+		[]byte("alias hi='echo hello'\n"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	code, out, errs := run(t, map[string]string{"HOME": home, "SHELL": "/usr/bin/zsh"})
@@ -160,7 +211,8 @@ func TestHelpAndVersion(t *testing.T) {
 		t.Errorf("--version: code %d out %q", code, out)
 	}
 	code, _, errs := run(t, nil, "-h")
-	if code != ExitOK || !strings.Contains(errs, "--shell") || !strings.Contains(errs, "Exit codes") {
+	if code != ExitOK || !strings.Contains(errs, "--shell") ||
+		!strings.Contains(errs, "Exit codes") {
 		t.Errorf("-h: code %d, usage %q", code, errs)
 	}
 }
@@ -186,8 +238,14 @@ func TestDebugLogGoesToCacheDirNotCWD(t *testing.T) {
 	file, _ := filepath.Abs(filepath.Join(old, testdata, "minimal/bashrc"))
 	// Linux honours XDG_CACHE_HOME; macOS uses $HOME/Library/Caches. Point both
 	// at the temp dir and ask the app where it will write.
-	code, _, errs := run(t, map[string]string{"PRETTY_ALIAS_DEBUG": "1", "XDG_CACHE_HOME": cache, "HOME": cache},
-		"--shell", "bash", "--file", file)
+	code, _, errs := run(
+		t,
+		map[string]string{"PRETTY_ALIAS_DEBUG": "1", "XDG_CACHE_HOME": cache, "HOME": cache},
+		"--shell",
+		"bash",
+		"--file",
+		file,
+	)
 	if code != ExitOK {
 		t.Fatalf("exit %d: %s", code, errs)
 	}
