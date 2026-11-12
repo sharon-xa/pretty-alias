@@ -32,7 +32,11 @@ func sample(n int) []alias.Alias {
 
 func newModel(t *testing.T, n int) *Model {
 	t.Helper()
-	return New(sample(n), highlight.New(shell.Bash, colorprofile.ANSI256), "~/.bashrc")
+	return New(
+		sample(n),
+		highlight.New(shell.Bash, colorprofile.ANSI256, highlight.DefaultTheme),
+		"~/.bashrc",
+	)
 }
 
 func send(m *Model, msgs ...tea.Msg) {
@@ -249,7 +253,7 @@ func TestNoAliases(t *testing.T) {
 func TestHostileContentIsNeutralised(t *testing.T) {
 	as := []alias.Alias{{Name: "bad\x1b[2Jname", Command: "echo \x1b]0;title\x07 \x1b[31m"}}
 	for _, p := range []colorprofile.Profile{colorprofile.Ascii, colorprofile.TrueColor} {
-		m := New(as, highlight.New(shell.Bash, p), "x")
+		m := New(as, highlight.New(shell.Bash, p, highlight.DefaultTheme), "x")
 		send(m, size(100, 20))
 		v := m.content()
 		if strings.Contains(v, "\x1b[2J") || strings.Contains(v, "\x1b]0;") ||
@@ -265,7 +269,7 @@ func TestUnicodeFixtureLikeRows(t *testing.T) {
 		{Name: "🚀", Command: "echo \"🚀✨🔥\""},
 		{Name: strings.Repeat("n", 200), Command: strings.Repeat("x", 3000)},
 	}
-	m := New(as, highlight.New(shell.Zsh, colorprofile.ANSI256), "x")
+	m := New(as, highlight.New(shell.Zsh, colorprofile.ANSI256, highlight.DefaultTheme), "x")
 	for _, w := range []int{120, 60, 30, 12} {
 		send(m, size(w, 30))
 		v := m.content()
@@ -287,7 +291,7 @@ func BenchmarkResize2000(b *testing.B) {
 
 func BenchmarkNew2000(b *testing.B) {
 	as := sample(2000)
-	hl := highlight.New(shell.Bash, colorprofile.ANSI256)
+	hl := highlight.New(shell.Bash, colorprofile.ANSI256, highlight.DefaultTheme)
 	for i := 0; i < b.N; i++ {
 		New(as, hl, "x")
 	}

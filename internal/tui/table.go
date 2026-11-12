@@ -1,15 +1,27 @@
 package tui
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/table"
 )
 
-// Colours (ANSI 256 palette).
-var (
-	colorAccent = lipgloss.Color("51")  // cyan
-	colorDim    = lipgloss.Color("245") // gray
-)
+// palette is the UI's own colors (borders, headers, keys, cursor); commands
+// are colored by the highlight theme. ANSI 256 values, downsampled by Bubble
+// Tea on terminals with fewer colors.
+type palette struct {
+	accent color.Color
+	dim    color.Color
+}
+
+func newPalette(dark bool) palette {
+	if dark {
+		return palette{accent: lipgloss.Color("51"), dim: lipgloss.Color("245")} // cyan, gray
+	}
+	// Bright cyan is unreadable on white: a dark teal and a darker gray.
+	return palette{accent: lipgloss.Color("24"), dim: lipgloss.Color("242")}
+}
 
 const (
 	margin       = 2  // blank columns each side of the table
@@ -36,13 +48,13 @@ const headerLines = 3
 // renderTable lays the rows out for a terminal of the given width and returns
 // it with each row's span, which the cursor uses. It is pure (rows + width in),
 // so it is cheap to re-run on every resize.
-func renderTable(rows []row, nameW, width int) (string, []span) {
+func renderTable(rows []row, nameW, width int, pal palette) (string, []span) {
 	tableW := max(width-2*margin, minTableW)
 
 	nameW = min(max(nameW, minNameW), max(tableW/maxNameShare, minNameW))
 	cmdW := max(tableW-nameW-chromeW, 8)
 
-	header := lipgloss.NewStyle().Foreground(colorAccent).Bold(true).Align(lipgloss.Center)
+	header := lipgloss.NewStyle().Foreground(pal.accent).Bold(true).Align(lipgloss.Center)
 	cell := lipgloss.NewStyle().Padding(0, 1)
 
 	// A row is as tall as its tallest cell; the cells wrap exactly as the table
@@ -69,7 +81,7 @@ func renderTable(rows []row, nameW, width int) (string, []span) {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(colorAccent)).
+		BorderStyle(lipgloss.NewStyle().Foreground(pal.accent)).
 		StyleFunc(func(r, col int) lipgloss.Style {
 			w := nameW + 2 // lipgloss widths include padding
 			if col == 1 {

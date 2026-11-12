@@ -27,10 +27,35 @@ type Highlighter struct {
 	formatter chroma.Formatter
 }
 
-// New returns a Highlighter using the lexer that matches sh and the formatter
-// that matches the terminal's colour profile p (see colorprofile.Detect, which
-// also honours NO_COLOR). Profiles without colour produce plain text.
-func New(sh shell.Shell, p colorprofile.Profile) *Highlighter {
+// DefaultTheme is the theme used unless one is chosen. On light backgrounds
+// AutoTheme picks its light counterpart instead (monokailight).
+const DefaultTheme = "monokai"
+
+// Themes returns the names New accepts (every Chroma style), sorted.
+func Themes() []string { return styles.Names() }
+
+// IsTheme reports whether name is a known theme. Case doesn't matter.
+func IsTheme(name string) bool {
+	_, ok := styles.Registry[strings.ToLower(name)]
+	return ok
+}
+
+// AutoTheme returns DefaultTheme for dark backgrounds and its registered light
+// counterpart for light ones.
+func AutoTheme(dark bool) string {
+	mode := chroma.Light
+	if dark {
+		mode = chroma.Dark
+	}
+	return strings.ToLower(styles.GetForMode(DefaultTheme, mode).Name)
+}
+
+// New returns a Highlighter using the lexer that matches sh, the Chroma style
+// called theme (see IsTheme; unknown names get Chroma's fallback style), and
+// the formatter that matches the terminal's colour profile p (see
+// colorprofile.Detect, which also honours NO_COLOR). Profiles without colour
+// produce plain text.
+func New(sh shell.Shell, p colorprofile.Profile, theme string) *Highlighter {
 	lexer := lexers.Get(string(sh)) // "bash", "zsh" (-> bash lexer) and "fish" exist
 	if lexer == nil {
 		lexer = lexers.Fallback
@@ -38,7 +63,7 @@ func New(sh shell.Shell, p colorprofile.Profile) *Highlighter {
 
 	return &Highlighter{
 		lexer:     chroma.Coalesce(lexer),
-		style:     styles.Get("monokai"),
+		style:     styles.Get(theme),
 		formatter: chromaFormatter(p),
 	}
 }

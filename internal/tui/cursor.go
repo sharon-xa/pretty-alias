@@ -5,7 +5,6 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 )
 
 // toastDuration is how long "copied …" stays in the footer.
@@ -15,14 +14,12 @@ const toastDuration = 2 * time.Second
 // has its own timer.
 type toastDoneMsg int
 
-var cursorMark = lipgloss.NewStyle().Foreground(colorAccent).Render("▌")
-
 // gutter draws the cursor: a bar left of the selected row's lines. Moving the
 // cursor only changes what this returns, so the table is never re-rendered.
 func (m *Model) gutter(c viewport.GutterContext) string {
 	if m.cursor < len(m.spans) {
 		if s := m.spans[m.cursor]; c.Index >= s.first && c.Index <= s.last {
-			return cursorMark
+			return m.cursorMark
 		}
 	}
 	return " "

@@ -26,7 +26,11 @@ func TestSpansMatchRenderedRows(t *testing.T) {
 		{Name: "last", Command: "true"},
 	}
 	for _, w := range []int{200, 120, 80, 40, 24} {
-		m := New(as, highlight.New(shell.Bash, colorprofile.ANSI256), "x")
+		m := New(
+			as,
+			highlight.New(shell.Bash, colorprofile.ANSI256, highlight.DefaultTheme),
+			"x",
+		)
 		send(m, size(w, 200))
 		lines := strings.Split(sgr.ReplaceAllString(m.vp.GetContent(), ""), "\n")
 		for i, s := range m.spans {
@@ -161,7 +165,11 @@ func TestCopyKeys(t *testing.T) {
 		{Name: "ll", Command: "ls -la"},
 		{Name: "gs", Command: "git status"},
 	}
-	m := New(as, highlight.New(shell.Bash, colorprofile.TrueColor), "x")
+	m := New(
+		as,
+		highlight.New(shell.Bash, colorprofile.TrueColor, highlight.DefaultTheme),
+		"x",
+	)
 	send(m, size(80, 24), press("j"))
 
 	_, cmd := m.Update(press("y"))

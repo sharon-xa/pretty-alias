@@ -72,6 +72,12 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 			false,
 			"print name<TAB>command lines instead of the interactive table",
 		)
+		themeFlag = fs.String(
+			"theme",
+			"auto",
+			"syntax highlighting theme: auto (monokai, or monokailight on light\n"+
+				"backgrounds) or any Chroma style name, e.g. dracula, nord, github",
+		)
 		versFlag = fs.Bool("version", false, "print the version and exit")
 	)
 	if err := fs.Parse(args); err != nil {
@@ -88,6 +94,11 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 	if *versFlag {
 		outf(stdout, "pretty-alias %s\n", Version(version))
 		return ExitOK
+	}
+	if *themeFlag != "auto" && !highlight.IsTheme(*themeFlag) {
+		outf(stderr, "pretty-alias: unknown theme %q. Themes: auto, %s\n",
+			*themeFlag, strings.Join(highlight.Themes(), ", "))
+		return ExitUsage
 	}
 
 	closeLog := setupLogging()
@@ -124,15 +135,28 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 		return ExitOK
 	}
 
-	m := tui.New(
-		aliases,
-		highlight.New(sh, colorprofile.Detect(os.Stdout, os.Environ())),
-		tilde(path),
-	)
+	profile := colorprofile.Detect(os.Stdout, os.Environ())
+	darkTheme, lightTheme := themes(*themeFlag)
+	slog.Debug("colors", "profile", profile, "dark", darkTheme, "light", lightTheme)
+
+	m := tui.New(aliases, highlight.New(sh, profile, darkTheme), tilde(path))
+	if profile > colorprofile.ASCII { // with no colors there is nothing to adapt
+		m.DetectBackground(highlight.New(sh, profile, lightTheme))
+	}
 	if err := tui.Run(m); err != nil {
 		return fail(stderr, err)
 	}
 	return ExitOK
+}
+
+// themes returns the highlight theme to use on dark and on light backgrounds
+// for a --theme value: "auto" means monokai and its light counterpart, and an
+// explicit theme is used on both.
+func themes(themeFlag string) (dark, light string) {
+	if themeFlag == "auto" {
+		return highlight.AutoTheme(true), highlight.AutoTheme(false)
+	}
+	return themeFlag, themeFlag
 }
 
 func pickShell(flagValue string) (shell.Shell, error) {

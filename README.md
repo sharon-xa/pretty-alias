@@ -43,6 +43,7 @@ pretty-alias                         # interactive table for your current shell
 pretty-alias --shell zsh             # force a shell instead of reading $SHELL
 pretty-alias --file ~/dotfiles/aliases.zsh --shell zsh
 pretty-alias --plain | grep git      # no TUI: one "name<TAB>command" line per alias
+pretty-alias --theme dracula        # pick the highlighting theme
 pretty-alias --version
 ```
 
@@ -51,6 +52,7 @@ pretty-alias --version
 | `--shell bash\|zsh\|fish` | Dialect to parse. Default: detected from `$SHELL`. |
 | `--file PATH` | Config file to read. Default: `~/.bashrc`, `~/.zshrc` or `~/.config/fish/config.fish`. |
 | `--plain` | Print `name<TAB>command` lines instead of the TUI. Used automatically when stdout is not a terminal. |
+| `--theme NAME` | Syntax highlighting theme. Default `auto`: `monokai`, or `monokailight` when the terminal reports a light background. Any [Chroma style](https://xyproto.github.io/splash/docs/) works, e.g. `dracula`, `nord`, `github`; an unknown name prints the full list. |
 | `--version` | Print the version. |
 
 Exit codes: `0` success (also when no aliases are found, which is reported on stderr), `1` error (unreadable file, unsupported shell), `2` bad usage.
@@ -84,6 +86,8 @@ Copying uses OSC 52, so it works over SSH too, but not every terminal supports i
 ### Current limitations
 
 Only the one config file is read (`.bashrc`, `.zshrc` or `config.fish`), so aliases defined in files it `source`s (such as `~/.bash_aliases`) are not shown yet (see [#2](https://github.com/sharon-xa/pretty-alias/issues/2) and [#31](https://github.com/sharon-xa/pretty-alias/issues/31)). Aliases that span several lines are skipped.
+
+The background (light or dark) is detected by asking the terminal when the program starts. Terminals that don't answer get the dark colors; on a light one, pass `--theme monokailight` (the UI's own colors still assume dark then).
 
 ## Development
 

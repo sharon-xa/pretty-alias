@@ -6,6 +6,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	"charm.land/bubbles/v2/help"
@@ -30,6 +31,14 @@ type Model struct {
 	nameW  int    // measured over all rows, so filtering doesn't shift the columns
 	source string // where the aliases came from, shown in the footer
 
+	// Colors. The background is assumed dark until the terminal says
+	// otherwise (see DetectBackground); nothing is drawn before that is known.
+	pal        palette
+	cursorMark string // the cursor bar, pre-rendered in pal.accent
+	detect     bool   // the background is being asked for
+	bgKnown    bool   // the answer (or the timeout) has arrived
+	lightHL    *highlight.Highlighter
+
 	keys     keyMap
 	help     help.Model
 	showHelp bool // the full (`?`) help is open
@@ -53,6 +62,7 @@ type Model struct {
 // New prepares the model. All the slow work (sanitizing and highlighting every
 // command) happens here, once, before the terminal is taken over.
 // hl may be nil for plain output. source is a display label such as "~/.zshrc".
+// The colors are for a dark background; see DetectBackground.
 func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model {
 	rows := make([]row, len(aliases))
 	nameW := 0
@@ -71,26 +81,15 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	vp.KeyMap = viewport.KeyMap{} // Update handles every key itself
 	vp.MouseWheelEnabled = false  // keep the mouse free for selecting/copying text
 
-	h := help.New()
-	h.Styles.ShortKey = lipgloss.NewStyle().Foreground(colorAccent)
-	h.Styles.ShortDesc = lipgloss.NewStyle().Foreground(colorDim)
-	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(colorDim)
-	h.Styles.FullKey = h.Styles.ShortKey
-	h.Styles.FullDesc = h.Styles.ShortDesc
-	h.Styles.FullSeparator = h.Styles.ShortSeparator
-
 	in := textinput.New()
 	in.Prompt = "/"
 	in.Placeholder = "filter by name or command"
-	st := in.Styles()
-	st.Focused.Prompt = lipgloss.NewStyle().Foreground(colorAccent)
-	st.Blurred.Prompt = lipgloss.NewStyle().Foreground(colorAccent)
-	in.SetStyles(st)
 
 	m := &Model{
 		all: rows, rows: rows, nameW: nameW, source: highlight.Sanitize(source),
-		keys: keys, help: h, vp: vp, filter: in,
+		keys: keys, help: help.New(), vp: vp, filter: in, bgKnown: true,
 	}
+	m.setPalette(true)
 	m.vp.LeftGutterFunc = m.gutter
 	return m
 }
@@ -102,13 +101,32 @@ func Run(m *Model) error {
 }
 
 // Init implements tea.Model.
-func (m *Model) Init() tea.Cmd { return nil }
+func (m *Model) Init() tea.Cmd {
+	if !m.detect {
+		return nil
+	}
+	return tea.Batch(
+		tea.RequestBackgroundColor,
+		tea.Tick(bgTimeout, func(time.Time) tea.Msg { return bgTimeoutMsg{} }),
+	)
+}
 
 // Update implements tea.Model.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.resize(msg.Width, msg.Height)
+		return m, nil
+
+	case tea.BackgroundColorMsg:
+		m.bgKnown = true
+		if !msg.IsDark() {
+			m.useLight()
+		}
+		return m, nil
+
+	case bgTimeoutMsg: // no answer: keep the dark colors
+		m.bgKnown = true
 		return m, nil
 
 	case toastDoneMsg:
@@ -281,9 +299,9 @@ func (m *Model) setHelp(on bool) {
 
 func (m *Model) setContent() {
 	w := m.width - 1 // the cursor gutter takes one column
-	s, spans := renderTable(m.rows, m.nameW, w)
+	s, spans := renderTable(m.rows, m.nameW, w, m.pal)
 	if len(m.rows) == 0 && len(m.all) > 0 {
-		msg := lipgloss.NewStyle().Foreground(colorDim).Render("no aliases match the filter")
+		msg := lipgloss.NewStyle().Foreground(m.pal.dim).Render("no aliases match the filter")
 		s += "\n\n" + lipgloss.PlaceHorizontal(w, lipgloss.Center, msg)
 	}
 	m.spans = spans
@@ -298,7 +316,7 @@ func (m *Model) View() tea.View {
 }
 
 func (m *Model) content() string {
-	if !m.ready {
+	if !m.ready || !m.bgKnown {
 		return ""
 	}
 	if m.footerLines() == 0 {
@@ -335,7 +353,7 @@ func (m *Model) fullHelp() string {
 }
 
 func (m *Model) footer() string {
-	dim := lipgloss.NewStyle().Foreground(colorDim)
+	dim := lipgloss.NewStyle().Foreground(m.pal.dim)
 	count := fmt.Sprintf("%d aliases", len(m.all))
 	if m.query != "" {
 		count = fmt.Sprintf("%d/%d aliases", len(m.rows), len(m.all))
@@ -351,7 +369,7 @@ func (m *Model) footer() string {
 	keys := m.help.ShortHelpView(m.keys.ShortHelp())
 	room := m.width - lipgloss.Width(keys)
 	if m.toast != "" {
-		status := lipgloss.NewStyle().Foreground(colorAccent).Render(" ✓ "+m.toast) + "  "
+		status := lipgloss.NewStyle().Foreground(m.pal.accent).Render(" ✓ "+m.toast) + "  "
 		if room > 0 {
 			keys = lipgloss.NewStyle().MaxWidth(room).Render(status) + keys
 		}

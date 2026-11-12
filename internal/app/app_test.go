@@ -289,3 +289,39 @@ func contains(lines []string, want string) bool {
 	}
 	return false
 }
+
+func TestUnknownThemeIsAUsageError(t *testing.T) {
+	code, out, errs := run(t, nil, "--theme", "nope", "--plain",
+		"--file", filepath.Join(testdata, "minimal/bashrc"), "--shell", "bash")
+	if code != ExitUsage || out != "" {
+		t.Errorf("code %d, stdout %q", code, out)
+	}
+	for _, want := range []string{`unknown theme "nope"`, "auto", "dracula", "monokailight"} {
+		if !strings.Contains(errs, want) {
+			t.Errorf("stderr lacks %q: %q", want, errs)
+		}
+	}
+}
+
+func TestKnownThemeIsAccepted(t *testing.T) {
+	for _, theme := range []string{"auto", "dracula", "Dracula", "monokailight"} {
+		code, out, errs := run(t, nil, "--theme", theme, "--plain",
+			"--file", filepath.Join(testdata, "minimal/bashrc"), "--shell", "bash")
+		if code != ExitOK || out != "ll\tls -la\n" {
+			t.Errorf("--theme %s: code %d, out %q, err %q", theme, code, out, errs)
+		}
+	}
+}
+
+func TestThemes(t *testing.T) {
+	tests := []struct{ flag, dark, light string }{
+		{"auto", "monokai", "monokailight"},
+		{"dracula", "dracula", "dracula"}, // an explicit theme is used on both
+		{"monokailight", "monokailight", "monokailight"},
+	}
+	for _, tt := range tests {
+		if dark, light := themes(tt.flag); dark != tt.dark || light != tt.light {
+			t.Errorf("themes(%q) = %q, %q; want %q, %q", tt.flag, dark, light, tt.dark, tt.light)
+		}
+	}
+}

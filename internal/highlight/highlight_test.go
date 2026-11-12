@@ -60,7 +60,7 @@ func TestCommand(t *testing.T) {
 	}
 	for _, sh := range shell.All {
 		for _, tt := range tests {
-			out := New(sh, tt.profile).Command(cmd)
+			out := New(sh, tt.profile, DefaultTheme).Command(cmd)
 			if tt.want == "" {
 				if out != cmd {
 					t.Errorf("%s/%s: got %q, want plain %q", sh, tt.profile, out, cmd)
@@ -86,7 +86,11 @@ func TestCommand(t *testing.T) {
 }
 
 func TestCommandNeverEmitsRawControlsFromInput(t *testing.T) {
-	out := New(shell.Bash, colorprofile.TrueColor).Command("echo \x1b]0;pwned\x07 \x1b[2J")
+	out := New(
+		shell.Bash,
+		colorprofile.TrueColor,
+		DefaultTheme,
+	).Command("echo \x1b]0;pwned\x07 \x1b[2J")
 	// The only escapes allowed are the highlighter's own SGR colour codes.
 	stripped := out
 	for {
@@ -109,7 +113,7 @@ func TestCommandNeverEmitsRawControlsFromInput(t *testing.T) {
 // detection: it must yield a profile that highlights to plain text.
 func TestNoColor(t *testing.T) {
 	p := colorprofile.Env([]string{"NO_COLOR=1", "TERM=xterm-256color", "COLORTERM=truecolor"})
-	if got := New(shell.Zsh, p).Command("ls -la"); got != "ls -la" {
+	if got := New(shell.Zsh, p, DefaultTheme).Command("ls -la"); got != "ls -la" {
 		t.Errorf("NO_COLOR (profile %s) output = %q, want plain", p, got)
 	}
 }
@@ -118,5 +122,54 @@ func TestNilHighlighterIsPlain(t *testing.T) {
 	var h *Highlighter
 	if got := h.Command("a\x1bb"); got != "a␛b" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestThemes(t *testing.T) {
+	if got := AutoTheme(true); got != "monokai" {
+		t.Errorf("AutoTheme(dark) = %q", got)
+	}
+	if got := AutoTheme(false); got != "monokailight" {
+		t.Errorf("AutoTheme(light) = %q", got)
+	}
+	for _, name := range []string{"monokai", "monokailight", "dracula", "Dracula", "github"} {
+		if !IsTheme(name) {
+			t.Errorf("IsTheme(%q) = false", name)
+		}
+	}
+	for _, name := range []string{"", "nope", "auto"} {
+		if IsTheme(name) {
+			t.Errorf("IsTheme(%q) = true", name)
+		}
+	}
+	if len(Themes()) < 50 {
+		t.Errorf("only %d themes", len(Themes()))
+	}
+}
+
+// Regression test for issue #30: monokai draws plain words in near-white
+// (#f8f8f2), which is unreadable on a light background. The light theme must not.
+func TestLightThemeIsReadableOnWhite(t *testing.T) {
+	const nearWhite = "38;2;248;248;242"
+	cmd := "echo hello world"
+	if out := New(
+		shell.Bash,
+		colorprofile.TrueColor,
+		AutoTheme(true),
+	).Command(cmd); !strings.Contains(
+		out,
+		nearWhite,
+	) {
+		t.Fatalf("test premise broken: dark theme output %q has no near-white", out)
+	}
+	if out := New(
+		shell.Bash,
+		colorprofile.TrueColor,
+		AutoTheme(false),
+	).Command(cmd); strings.Contains(
+		out,
+		nearWhite,
+	) {
+		t.Errorf("light theme still uses near-white text: %q", out)
 	}
 }
