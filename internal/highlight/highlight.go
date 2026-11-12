@@ -6,7 +6,6 @@
 package highlight
 
 import (
-	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -15,6 +14,7 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/sharon-xa/pretty-alias/internal/shell"
 )
@@ -27,21 +27,20 @@ type Highlighter struct {
 	formatter chroma.Formatter
 }
 
-// New returns a Highlighter using the lexer that matches sh. It honours the
-// NO_COLOR convention (https://no-color.org) by returning plain output.
-func New(sh shell.Shell) *Highlighter {
-	if os.Getenv("NO_COLOR") != "" {
-		return nil
-	}
+// New returns a Highlighter using the lexer that matches sh and the formatter
+// that matches the terminal's colour profile p (see colorprofile.Detect, which
+// also honours NO_COLOR). Profiles without colour produce plain text.
+func New(sh shell.Shell, p colorprofile.Profile) *Highlighter {
 	lexer := lexers.Get(string(sh)) // "bash", "zsh" (-> bash lexer) and "fish" exist
 	if lexer == nil {
 		lexer = lexers.Fallback
 	}
-	style := styles.Get("monokai")
-	if style == nil {
-		style = styles.Fallback
+
+	return &Highlighter{
+		lexer:     chroma.Coalesce(lexer),
+		style:     styles.Get("monokai"),
+		formatter: chromaFormatter(p),
 	}
-	return &Highlighter{lexer: lexer, style: style, formatter: formatters.TTY256}
 }
 
 // Command returns s sanitized (see Sanitize) and highlighted.
@@ -50,14 +49,17 @@ func (h *Highlighter) Command(s string) string {
 	if h == nil || h.lexer == nil || s == "" {
 		return s
 	}
+
 	it, err := h.lexer.Tokenise(nil, s)
 	if err != nil {
 		return s
 	}
+
 	var b strings.Builder
 	if err := h.formatter.Format(&b, h.style, it); err != nil {
 		return s
 	}
+
 	return strings.TrimRight(b.String(), "\n")
 }
 
@@ -69,6 +71,7 @@ func Sanitize(s string) string {
 	if !strings.ContainsFunc(s, unicode.IsControl) && utf8.ValidString(s) {
 		return s
 	}
+
 	s = strings.ToValidUTF8(s, "�")
 	return strings.Map(func(r rune) rune {
 		switch {
@@ -81,4 +84,17 @@ func Sanitize(s string) string {
 		}
 		return r
 	}, s)
+}
+
+func chromaFormatter(p colorprofile.Profile) chroma.Formatter {
+	switch p {
+	case colorprofile.TrueColor:
+		return formatters.TTY16m
+	case colorprofile.ANSI256:
+		return formatters.TTY256
+	case colorprofile.ANSI:
+		return formatters.TTY16
+	default:
+		return formatters.NoOp
+	}
 }

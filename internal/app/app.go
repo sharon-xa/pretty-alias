@@ -13,6 +13,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/mattn/go-isatty"
 
 	"github.com/sharon-xa/pretty-alias/internal/alias"
@@ -56,10 +57,22 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 `)
 	}
 	var (
-		shellFlag = fs.String("shell", "", "shell dialect to parse: bash, zsh or fish (default: detect from $SHELL)")
-		fileFlag  = fs.String("file", "", "config file to read (default: the shell's usual rc file)")
-		plainFlag = fs.Bool("plain", false, "print name<TAB>command lines instead of the interactive table")
-		versFlag  = fs.Bool("version", false, "print the version and exit")
+		shellFlag = fs.String(
+			"shell",
+			"",
+			"shell dialect to parse: bash, zsh or fish (default: detect from $SHELL)",
+		)
+		fileFlag = fs.String(
+			"file",
+			"",
+			"config file to read (default: the shell's usual rc file)",
+		)
+		plainFlag = fs.Bool(
+			"plain",
+			false,
+			"print name<TAB>command lines instead of the interactive table",
+		)
+		versFlag = fs.Bool("version", false, "print the version and exit")
 	)
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -111,7 +124,11 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 		return ExitOK
 	}
 
-	m := tui.New(aliases, highlight.New(sh), tilde(path))
+	m := tui.New(
+		aliases,
+		highlight.New(sh, colorprofile.Detect(os.Stdout, os.Environ())),
+		tilde(path),
+	)
 	if err := tui.Run(m); err != nil {
 		return fail(stderr, err)
 	}
@@ -161,7 +178,8 @@ func Version(injected string) string {
 	if injected != "" && injected != "dev" {
 		return injected
 	}
-	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" &&
+		bi.Main.Version != "(devel)" {
 		return bi.Main.Version
 	}
 	return "dev"

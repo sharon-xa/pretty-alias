@@ -6,6 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/sharon-xa/pretty-alias/internal/shell"
 )
 
@@ -46,25 +47,41 @@ func TestSanitizeOutputIsAlwaysSafe(t *testing.T) {
 }
 
 func TestCommand(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
+	const cmd = "git log --oneline | head -n 5 && echo \"done\""
+	tests := []struct {
+		profile colorprofile.Profile
+		want    string // substring proving the right formatter ran; "" = plain
+	}{
+		{colorprofile.TrueColor, "\x1b[38;2;"},
+		{colorprofile.ANSI256, "\x1b[38;5;"},
+		{colorprofile.ANSI, "\x1b["},
+		{colorprofile.Ascii, ""},
+		{colorprofile.NoTTY, ""},
+	}
 	for _, sh := range shell.All {
-		h := New(sh)
-		if h == nil {
-			t.Fatalf("New(%s) = nil", sh)
-		}
-		out := h.Command("git log --oneline | head -n 5 && echo \"done\"")
-		if !strings.Contains(out, "\x1b[") {
-			t.Errorf("%s: expected ANSI colour codes, got %q", sh, out)
-		}
-		if strings.HasSuffix(out, "\n") {
-			t.Errorf("%s: trailing newline in %q", sh, out)
+		for _, tt := range tests {
+			out := New(sh, tt.profile).Command(cmd)
+			if tt.want == "" {
+				if out != cmd {
+					t.Errorf("%s/%s: got %q, want plain %q", sh, tt.profile, out, cmd)
+				}
+				continue
+			}
+			if !strings.Contains(out, tt.want) {
+				t.Errorf("%s/%s: expected %q in %q", sh, tt.profile, tt.want, out)
+			}
+			if tt.profile == colorprofile.ANSI && strings.Contains(out, "38;") {
+				t.Errorf("%s/%s: 256/true-colour codes in 16-colour output: %q", sh, tt.profile, out)
+			}
+			if strings.HasSuffix(out, "\n") {
+				t.Errorf("%s/%s: trailing newline in %q", sh, tt.profile, out)
+			}
 		}
 	}
 }
 
 func TestCommandNeverEmitsRawControlsFromInput(t *testing.T) {
-	t.Setenv("NO_COLOR", "")
-	out := New(shell.Bash).Command("echo \x1b]0;pwned\x07 \x1b[2J")
+	out := New(shell.Bash, colorprofile.TrueColor).Command("echo \x1b]0;pwned\x07 \x1b[2J")
 	// The only escapes allowed are the highlighter's own SGR colour codes.
 	stripped := out
 	for {
@@ -83,11 +100,12 @@ func TestCommandNeverEmitsRawControlsFromInput(t *testing.T) {
 	}
 }
 
+// NO_COLOR (https://no-color.org) is honoured through colour-profile
+// detection: it must yield a profile that highlights to plain text.
 func TestNoColor(t *testing.T) {
-	t.Setenv("NO_COLOR", "1")
-	h := New(shell.Zsh)
-	if got := h.Command("ls -la"); got != "ls -la" {
-		t.Errorf("NO_COLOR output = %q, want plain", got)
+	p := colorprofile.Env([]string{"NO_COLOR=1", "TERM=xterm-256color", "COLORTERM=truecolor"})
+	if got := New(shell.Zsh, p).Command("ls -la"); got != "ls -la" {
+		t.Errorf("NO_COLOR (profile %s) output = %q, want plain", p, got)
 	}
 }
 
