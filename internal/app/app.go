@@ -72,6 +72,11 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 			false,
 			"print name<TAB>command lines instead of the interactive table",
 		)
+		sortFlag = fs.String(
+			"sort",
+			"file",
+			"order: file (as defined), name or command; s cycles it in the table",
+		)
 		themeFlag = fs.String(
 			"theme",
 			"auto",
@@ -94,6 +99,11 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 	if *versFlag {
 		outf(stdout, "pretty-alias %s\n", Version(version))
 		return ExitOK
+	}
+	order, err := alias.ParseOrder(*sortFlag)
+	if err != nil {
+		outf(stderr, "pretty-alias: %v\n", err)
+		return ExitUsage
 	}
 	if *themeFlag != "auto" && !highlight.IsTheme(*themeFlag) {
 		outf(stderr, "pretty-alias: unknown theme %q. Themes: auto, %s\n",
@@ -131,6 +141,7 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 	}
 
 	if *plainFlag || !isTerminal(stdout) {
+		alias.Sort(aliases, order)
 		printPlain(stdout, aliases)
 		return ExitOK
 	}
@@ -139,7 +150,8 @@ Exit codes: 0 ok (also when no aliases are found), 1 error, 2 bad usage.
 	darkTheme, lightTheme := themes(*themeFlag)
 	slog.Debug("colors", "profile", profile, "dark", darkTheme, "light", lightTheme)
 
-	m := tui.New(aliases, highlight.New(sh, profile, darkTheme), tilde(path))
+	m := tui.New(aliases, highlight.New(sh, profile, darkTheme), tilde(path)) // file order
+	m.SetOrder(order)
 	if profile > colorprofile.ASCII { // with no colors there is nothing to adapt
 		m.DetectBackground(highlight.New(sh, profile, lightTheme))
 	}

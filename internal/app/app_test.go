@@ -325,3 +325,43 @@ func TestThemes(t *testing.T) {
 		}
 	}
 }
+
+func TestSortFlag(t *testing.T) {
+	file := filepath.Join(testdata, "zshrc")
+	firstNames := func(out string) []string {
+		var names []string
+		for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+			names = append(names, strings.SplitN(line, "\t", 2)[0])
+		}
+		return names
+	}
+	_, fileOut, _ := run(t, nil, "--plain", "--shell", "zsh", "--file", file)
+	code, nameOut, _ := run(t, nil, "--plain", "--shell", "zsh", "--file", file, "--sort", "name")
+	if code != ExitOK {
+		t.Fatalf("--sort name: code %d", code)
+	}
+	if fileOut == nameOut {
+		t.Fatal("--sort name changed nothing (fixture already sorted?)")
+	}
+	names := firstNames(nameOut)
+	for i := 1; i < len(names); i++ {
+		if strings.ToLower(names[i-1]) > strings.ToLower(names[i]) {
+			t.Errorf("not sorted by name: %q before %q", names[i-1], names[i])
+		}
+	}
+	if len(names) != len(firstNames(fileOut)) {
+		t.Errorf("sorting changed the number of aliases")
+	}
+	code, out, _ := run(t, nil, "--plain", "--shell", "zsh", "--file", file, "--sort", "file")
+	if code != ExitOK || out != fileOut {
+		t.Error("--sort file differs from the default")
+	}
+}
+
+func TestUnknownSortIsAUsageError(t *testing.T) {
+	code, out, errs := run(t, nil, "--sort", "alpha", "--plain",
+		"--file", filepath.Join(testdata, "minimal/bashrc"), "--shell", "bash")
+	if code != ExitUsage || out != "" || !strings.Contains(errs, `unknown sort order "alpha"`) {
+		t.Errorf("code %d, stdout %q, stderr %q", code, out, errs)
+	}
+}

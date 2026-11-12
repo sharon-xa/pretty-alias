@@ -43,6 +43,7 @@ pretty-alias                         # interactive table for your current shell
 pretty-alias --shell zsh             # force a shell instead of reading $SHELL
 pretty-alias --file ~/dotfiles/aliases.zsh --shell zsh
 pretty-alias --plain | grep git      # no TUI: one "name<TAB>command" line per alias
+pretty-alias --plain --sort name    # alphabetical
 pretty-alias --theme dracula        # pick the highlighting theme
 pretty-alias --version
 ```
@@ -52,6 +53,7 @@ pretty-alias --version
 | `--shell bash\|zsh\|fish` | Dialect to parse. Default: detected from `$SHELL`. |
 | `--file PATH` | Config file to read. Default: `~/.bashrc`, `~/.zshrc` or `~/.config/fish/config.fish`. |
 | `--plain` | Print `name<TAB>command` lines instead of the TUI. Used automatically when stdout is not a terminal. |
+| `--sort file\|name\|command` | Order of the aliases: as defined in the file (default), by name, or by command (which puts all the `git …` aliases together). Case is ignored. Also applies to `--plain`. |
 | `--theme NAME` | Syntax highlighting theme. Default `auto`: `monokai`, or `monokailight` when the terminal reports a light background. Any [Chroma style](https://xyproto.github.io/splash/docs/) works, e.g. `dracula`, `nord`, `github`; an unknown name prints the full list. |
 | `--version` | Print the version. |
 
@@ -67,6 +69,7 @@ Exit codes: `0` success (also when no aliases are found, which is reported on st
 | `g` / `home`, `G` / `end` | First / last alias |
 | `y` / `enter` | Copy the selected alias's command to the clipboard |
 | `Y` | Copy the selected alias's name |
+| `s` | Sort: cycle file order → by name → by command (the footer shows the order unless it's file order) |
 | Mouse wheel | Move the selection. The mouse is not captured, so you can still select and copy text; the terminal turns the wheel into `↑`/`↓` (most do by default, plain xterm doesn't). |
 | `/` | Filter: type to show only aliases whose name or command contains the text (case-insensitive unless it has a capital letter). `enter` keeps the filter, `esc` clears it. While typing, every letter goes into the filter. |
 | `?` | Show or hide every key binding (the footer only lists `/`, `y`, `?` and `q`) |

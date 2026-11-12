@@ -35,7 +35,8 @@ const (
 type row struct {
 	name    string // sanitized
 	command string // sanitized + highlighted (may contain ANSI codes)
-	text    string // sanitized, unhighlighted command, for filtering
+	text    string // sanitized, unhighlighted command, for filtering and sorting
+	idx     int    // position in the file, for sorting back to file order
 }
 
 // span is the lines a row's text occupies in the rendered table (inclusive,

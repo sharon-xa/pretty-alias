@@ -53,6 +53,7 @@ app ──► tui ──► highlight ──► shell
 | Search / filter (#25) | Done (substring, smart-case): `tui.Model.filter` + `filterRows`. Fuzzy matching would replace `filterRows` |
 | `--json`, `--tsv` (#36) | next to `printPlain` in `app`; the data is already typed |
 | Copy to clipboard, selection (#28) | Done: `tui/cursor.go`. `renderTable` returns each row's line span; the cursor is drawn in the viewport's gutter, so moving it never re-renders the table |
+| Sorting (#29) | Done: `alias.Order` (`Sort`, `Key`) shared by `--sort` for `--plain` and the TUI's `SetOrder` (`tui/order.go`). Grouping under headings belongs with categories (#38); grouping by file with #31 |
 | Theme / colors (#30) | Done: `--theme` in `app`, themes in `highlight` (`AutoTheme` uses Chroma's light/dark counterpart pairs), UI palette in `tui/table.go` (`newPalette`), detection in `tui/colors.go` |
 | New key bindings | `tui/keys.go`: add it to `keyMap` and `FullHelp()` (the `?` view, 4 columns that fit in 80). `ShortHelp()` (the footer) stays at `/`, `y`, `?`, `q` so it fits in 60 columns |
 | Diagnostics: duplicates, shadowing (#40) | new package `internal/lint` taking `[]alias.Alias` |

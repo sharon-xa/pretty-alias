@@ -15,6 +15,9 @@ type keyMap struct {
 	Bottom   key.Binding
 	Quit     key.Binding
 
+	// Sort cycles the order: file, name, command.
+	Sort key.Binding
+
 	// Copy puts the selected row's command on the clipboard, CopyName its name.
 	Copy     key.Binding
 	CopyName key.Binding
@@ -50,6 +53,7 @@ func newKeyMap() keyMap {
 		Bottom:   key.NewBinding(key.WithKeys("G", "end"), key.WithHelp("G", "bottom")),
 		Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
 
+		Sort:     key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "sort")),
 		Copy:     key.NewBinding(key.WithKeys("y", "enter"), key.WithHelp("y", "copy")),
 		CopyName: key.NewBinding(key.WithKeys("Y"), key.WithHelp("Y", "copy name")),
 
@@ -85,7 +89,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.HalfUp, k.HalfDown, k.Top, k.Bottom},
 		{k.Copy, k.CopyName, k.Filter, k.ClearFilter},
-		{k.Help, k.Quit},
+		{k.Sort, k.Help, k.Quit},
 	}
 }
 

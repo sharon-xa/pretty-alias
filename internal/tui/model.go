@@ -26,10 +26,11 @@ const minTableLines = 3
 
 // Model is the Bubble Tea model.
 type Model struct {
-	all    []row  // every alias, in file order
+	all    []row  // every alias, in the current order
 	rows   []row  // the ones matching the filter (all of them when it is empty)
 	nameW  int    // measured over all rows, so filtering doesn't shift the columns
 	source string // where the aliases came from, shown in the footer
+	order  alias.Order
 
 	// Colors. The background is assumed dark until the terminal says
 	// otherwise (see DetectBackground); nothing is drawn before that is known.
@@ -71,6 +72,7 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 			name:    highlight.Sanitize(a.Name),
 			command: hl.Command(a.Command),
 			text:    highlight.Sanitize(a.Command),
+			idx:     i,
 		}
 		rows[i] = r
 		nameW = max(nameW, lipgloss.Width(r.name))
@@ -88,6 +90,7 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	m := &Model{
 		all: rows, rows: rows, nameW: nameW, source: highlight.Sanitize(source),
 		keys: keys, help: help.New(), vp: vp, filter: in, bgKnown: true,
+		order: alias.ByFile,
 	}
 	m.setPalette(true)
 	m.vp.LeftGutterFunc = m.gutter
@@ -157,6 +160,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filter.SetValue("")
 			m.applyFilter()
 			return m, nil
+		case key.Matches(msg, m.keys.Sort):
+			m.SetOrder(m.order.Next())
 		case key.Matches(msg, m.keys.Copy):
 			return m, m.copySelected(false)
 		case key.Matches(msg, m.keys.CopyName):
@@ -378,6 +383,9 @@ func (m *Model) footer() string {
 	head := " " + count
 	if m.query != "" {
 		head += " · /" + highlight.Sanitize(m.query)
+	}
+	if m.order != alias.ByFile {
+		head += " · by " + string(m.order)
 	}
 	tail := fmt.Sprintf(" · %3.0f%%  ", m.vp.ScrollPercent()*100)
 	src := truncateLeft(m.source, room-lipgloss.Width(head)-lipgloss.Width(tail)-len(" · "))
