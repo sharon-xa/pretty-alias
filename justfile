@@ -135,18 +135,15 @@ outdated:
 install:
     go install .
 
-# cross-compile release-style binaries into ./dist
+# GoReleaser, pinned and run through `go run` so nothing has to be installed
+goreleaser := "go run github.com/goreleaser/goreleaser/v2@v2.20.1"
+
+# build release binaries + checksums.txt into ./dist (GoReleaser snapshot, nothing is
+# published), then check them against the install.sh contract by installing from them
 dist:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    mkdir -p dist
-    for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
-      os=${target%/*}; arch=${target#*/}
-      echo "building $os/$arch"
-      GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -trimpath -ldflags "-s -w {{ldflags}}" \
-        -o "dist/{{bin}}-$os-$arch" .
-    done
-    (cd dist && { sha256sum {{bin}}-* 2>/dev/null || shasum -a 256 {{bin}}-*; } > checksums.txt)
+    {{goreleaser}} check
+    {{goreleaser}} release --snapshot --clean
+    scripts/check-dist.sh dist
 
 # remove build artifacts
 clean:

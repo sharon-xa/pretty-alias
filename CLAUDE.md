@@ -14,6 +14,7 @@ just test      # go test ./...
 just try testdata/zshrc zsh            # open the TUI on a fixture in a throwaway $HOME
 just plain testdata/config.fish fish   # parsed output, no TUI
 just fixtures  # regenerate testdata/large (deterministic; only the default n/seed is committed)
+just dist      # GoReleaser snapshot into dist/ + scripts/check-dist.sh (installs it with install.sh)
 ```
 
 Run one test: `go test -run TestScrolling ./internal/tui`.
@@ -42,10 +43,11 @@ A change is done only when **`just check` and `just smoke` both pass**. If eithe
 
 ## Gotchas
 
+- **GoReleaser** is pinned (v2.20.1) in the justfile and both workflows. Bump all three together.
 - **Bubble Tea v2** (`charm.land/*/v2`, not `github.com/charmbracelet/*`): `View()` returns `tea.View` (alt screen is `v.AltScreen = true`). Keys are `tea.KeyPressMsg`. The space bar's key string is `"space"`, not `" "`. Viewport and help size and offset go through methods (`SetWidth`, `YOffset()`, …).
 - **Colour detection**: `colorprofile.Detect` asks tmux for its real capabilities, so `TERM=...` overrides have no effect inside tmux. To test colour modes end to end, run under `env -i HOME=$HOME PATH=$PATH TERM=... COLORTERM=...`.
-- **Release asset contract**: `install.sh` expects `pretty-alias-<os>-<arch>` (linux/darwin × amd64/arm64) plus `checksums.txt` in `sha256sum` format. `just dist` produces exactly this. Don't rename assets without updating `install.sh` and `install_test.go`.
-- **CI is path-filtered** (`.github/workflows/ci.yml`): it runs only for Go files, `go.mod`/`go.sum`, `testdata/`, `install.sh`, `.golangci.yml` and the workflow itself, and never for `.md` files. If the build or tests start depending on another kind of file (e.g. `go:embed` assets), add it to the `paths` list.
+- **Release asset contract**: `install.sh` expects `pretty-alias-<os>-<arch>` (linux/darwin × amd64/arm64) plus `checksums.txt` in `sha256sum` format. GoReleaser makes these only because `.goreleaser.yaml` overrides its defaults (`formats: [binary]`, `checksum.name_template`). After touching `.goreleaser.yaml` or `install.sh`, run `just dist`; `scripts/check-dist.sh` checks the contract and installs the snapshot with the real installer.
+- **CI is path-filtered** (`.github/workflows/ci.yml`): it runs only for Go files, `go.mod`/`go.sum`, `testdata/`, `install.sh`, `.golangci.yml`, `.goreleaser.yaml`, `scripts/` and the workflow itself, and never for `.md` files. If the build or tests start depending on another kind of file (e.g. `go:embed` assets), add it to the `paths` list.
 - The debug log (`PRETTY_ALIAS_DEBUG=1`) goes to the user cache dir, never the working directory. No `.env` files.
 
 ## Code style
@@ -73,6 +75,7 @@ Update these in the same change as the code:
 
 - **Never create branches** unless explicitly asked. Work and commit on the current branch (normally `main`).
 - Commit when a unit of work is done and checks pass. **Ask before every push.**
+- **Never create or push a tag, or create a GitHub release, without being asked.** Pushing a `v*` tag publishes a release (`.github/workflows/release.yml`).
 - Use conventional commit subjects (`fix:`, `feat:`, `chore(deps):`, `ci:`, `docs:`, `test:`, `refactor:`, `build:`). When a commit completes an issue, put `Closes #N` in the body.
 - If an issue is only partly done, leave a progress comment on it listing what's done and what remains, and keep it open.
 - Work is tracked in GitHub issues. Roadmap and milestones are in #45. Check `gh issue list` before suggesting what to do next.

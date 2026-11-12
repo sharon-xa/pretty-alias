@@ -85,8 +85,13 @@ just test       # go test ./...
 just check      # vet + lint + race tests + format check (what CI runs)
 just fmt        # format (gofumpt + golines, 100 columns)
 just smoke      # run every fixture through the real binary in a pty
+just dist       # build release binaries with GoReleaser (snapshot) and test them with install.sh
 just try testdata/zshrc zsh    # open the TUI on a fixture, without touching your real config
 ```
+
+### Releasing
+
+Push a version tag: `git tag v1.3.0 && git push origin v1.3.0`. The release workflow runs the tests, checks a snapshot build against `install.sh`, then publishes binaries for Linux and macOS (amd64, arm64) plus `checksums.txt` with [GoReleaser](https://goreleaser.com).
 
 Layout and design rules are in [ARCHITECTURE.md](ARCHITECTURE.md); fixtures are documented in [testdata/README.md](testdata/README.md).
 

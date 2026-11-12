@@ -1,0 +1,37 @@
+# Cut a release by pushing a version tag:  git tag v1.3.0 && git push origin v1.3.0
+# Tests and the install.sh contract check run first; nothing is published if they fail.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # GoReleaser needs the history for the changelog
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: test
+        run: go test -race -count=1 ./...
+      - name: snapshot build
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.20.1
+          args: release --snapshot --clean
+      - name: check assets against install.sh
+        run: scripts/check-dist.sh dist
+      - name: release
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.20.1
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

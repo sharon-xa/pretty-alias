@@ -1,7 +1,7 @@
 name: ci
 
 # Only run when something CI builds or tests changes. install.sh is covered by
-# install_test.go; testdata/ holds the fixtures the tests read.
+# install_test.go and the release dry run; testdata/ holds the fixtures the tests read.
 on:
   push:
     branches: [main]
@@ -13,6 +13,8 @@ on:
       - "!**.md"
       - install.sh
       - .golangci.yml
+      - .goreleaser.yaml
+      - "scripts/**"
       - .github/workflows/ci.yml
   pull_request:
     paths: *go-paths
@@ -39,3 +41,27 @@ jobs:
         run: go test -race -count=1 ./...
       - name: build
         run: go build -o /dev/null .
+
+  # Build the release exactly as a tag would (without publishing) and install it with the
+  # real install.sh, so a broken .goreleaser.yaml or asset rename fails here, not on release day.
+  release-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: goreleaser check
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.20.1
+          args: check
+      - name: snapshot build
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.20.1
+          args: release --snapshot --clean
+      - name: check assets against install.sh
+        run: scripts/check-dist.sh dist

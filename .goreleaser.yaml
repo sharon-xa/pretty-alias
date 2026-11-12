@@ -1,0 +1,61 @@
+# GoReleaser config. Releases are cut by pushing a v* tag (.github/workflows/release.yml).
+#
+# The asset names below are a contract with install.sh (see ARCHITECTURE.md):
+#   pretty-alias-<os>-<arch>   bare binaries, linux/darwin x amd64/arm64
+#   checksums.txt              sha256sum format
+# `just dist` builds a snapshot and checks it with scripts/check-dist.sh.
+version: 2
+
+project_name: pretty-alias
+
+builds:
+  - main: .
+    binary: pretty-alias
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version=v{{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [binary]
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev+{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?!?:'
+      order: 0
+    - title: Fixes
+      regexp: '^fix(\(.+\))?!?:'
+      order: 1
+    - title: Dependencies
+      regexp: '^chore\(deps\)!?:'
+      order: 2
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - '^docs(\(.+\))?:'
+      - '^test(\(.+\))?:'
+      - '^ci(\(.+\))?:'
+      - "^Merge "
+
+release:
+  footer: |
+    Install or update:
+
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/sharon-xa/pretty-alias/main/install.sh | sh
+    ```

@@ -63,6 +63,7 @@ app ──► tui ──► highlight ──► shell
 - `internal/app`: runs the whole program (flags → file → output) with `--plain`; includes "every fixture runs without crashing".
 - `install_test.go` (repo root) runs the real `install.sh` against a local fake release server: verified install, 404, checksum mismatch, missing checksums, an HTML error page, atomic re-install, and the legacy single-asset release.
 - `just smoke` runs the real binary in a pty over every fixture.
+- `just dist` (and the `release-dry-run` CI job) builds a GoReleaser snapshot and runs `scripts/check-dist.sh`, which checks the assets against the release contract and installs them with the real `install.sh` from a local HTTP server.
 - Regenerate big fixtures with `just fixtures`; they are deterministic.
 
 ## Decisions worth remembering
@@ -72,5 +73,6 @@ app ──► tui ──► highlight ──► shell
 - **No `.env`/`godotenv`.** Configuration is the real environment plus flags. The debug log goes to the user cache dir, never the working directory.
 - **Mouse is not captured**, so you can select and copy text with the terminal as usual. Revisit if/when row selection (#28) lands.
 - **Highlighting is done once, up front** (`tui.New`). That costs ~0.3 s for 2000 aliases and ~0.03 s for a typical 200. If this ever matters, highlight lazily for the visible rows.
-- **Release asset contract** (what `install.sh` expects): each release publishes `pretty-alias-<os>-<arch>` for `linux`/`darwin` × `amd64`/`arm64`, plus a `checksums.txt` in `sha256sum` format (`<hash>  <filename>`). `just dist` produces exactly this; the future GoReleaser setup (#23) must keep the same names. The one exception is the legacy v1.2.1 release (a bare `pretty-alias` Linux amd64 binary with no checksums), which the installer still accepts with a warning.
+- **Release asset contract** (what `install.sh` expects): each release publishes `pretty-alias-<os>-<arch>` for `linux`/`darwin` × `amd64`/`arm64`, plus a `checksums.txt` in `sha256sum` format (`<hash>  <filename>`). GoReleaser (`.goreleaser.yaml`) produces exactly this: bare binaries (`formats: [binary]`) and a fixed checksum file name, both of which differ from GoReleaser's defaults. `scripts/check-dist.sh` enforces it in CI and before every release. The one exception is the legacy v1.2.1 release (a bare `pretty-alias` Linux amd64 binary with no checksums), which the installer still accepts with a warning.
+- **Releases are tag-driven.** Pushing a `v*` tag runs `.github/workflows/release.yml`: tests, a snapshot build plus the contract check, then `goreleaser release`. The binary's `--version` is the tag (`main.version` via `-ldflags`).
 - **`go` directive follows the latest release** (see `go.mod`); `just upgrade` bumps dependencies.
