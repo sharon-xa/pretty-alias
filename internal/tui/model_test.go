@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sharon-xa/pretty-alias/internal/alias"
 	"github.com/sharon-xa/pretty-alias/internal/highlight"
@@ -40,26 +40,29 @@ func size(w, h int) tea.Msg { return tea.WindowSizeMsg{Width: w, Height: h} }
 func press(s string) tea.Msg {
 	switch s {
 	case "down":
-		return tea.KeyMsg{Type: tea.KeyDown}
+		return tea.KeyPressMsg{Code: tea.KeyDown}
 	case "up":
-		return tea.KeyMsg{Type: tea.KeyUp}
+		return tea.KeyPressMsg{Code: tea.KeyUp}
 	case "pgdown":
-		return tea.KeyMsg{Type: tea.KeyPgDown}
+		return tea.KeyPressMsg{Code: tea.KeyPgDown}
+	case "space":
+		return tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 	case "end":
-		return tea.KeyMsg{Type: tea.KeyEnd}
+		return tea.KeyPressMsg{Code: tea.KeyEnd}
 	case "home":
-		return tea.KeyMsg{Type: tea.KeyHome}
+		return tea.KeyPressMsg{Code: tea.KeyHome}
 	case "esc":
-		return tea.KeyMsg{Type: tea.KeyEsc}
+		return tea.KeyPressMsg{Code: tea.KeyEscape}
 	case "ctrl+c":
-		return tea.KeyMsg{Type: tea.KeyCtrlC}
+		return tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
 	}
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+	r := []rune(s)[0]
+	return tea.KeyPressMsg{Code: r, Text: s}
 }
 
 func TestNothingRenderedBeforeSizeKnown(t *testing.T) {
 	m := newModel(t, 3)
-	if v := m.View(); v != "" {
+	if v := m.content(); v != "" {
 		t.Errorf("View before WindowSizeMsg = %q, want empty", v)
 	}
 }
@@ -67,7 +70,7 @@ func TestNothingRenderedBeforeSizeKnown(t *testing.T) {
 func TestViewShowsHeaderRowsAndFooter(t *testing.T) {
 	m := newModel(t, 5)
 	send(m, size(100, 30))
-	v := m.View()
+	v := m.content()
 	for _, want := range []string{"ALIAS", "COMMAND", "a0000", "a0004", "5 aliases", "~/.bashrc", "quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("View missing %q:\n%s", want, v)
@@ -79,7 +82,7 @@ func TestViewFitsTheWindow(t *testing.T) {
 	for _, sz := range [][2]int{{120, 40}, {80, 24}, {40, 20}, {20, 10}, {10, 5}, {1, 1}} {
 		m := newModel(t, 200)
 		send(m, size(sz[0], sz[1]))
-		v := m.View()
+		v := m.content()
 		if got := lipgloss.Height(v); got > sz[1] {
 			t.Errorf("%dx%d: view is %d lines tall", sz[0], sz[1], got)
 		}
@@ -103,20 +106,20 @@ func TestQuitKeys(t *testing.T) {
 func TestScrolling(t *testing.T) {
 	m := newModel(t, 300)
 	send(m, size(100, 20))
-	if m.vp.YOffset != 0 {
-		t.Fatalf("starts at %d", m.vp.YOffset)
+	if m.vp.YOffset() != 0 {
+		t.Fatalf("starts at %d", m.vp.YOffset())
 	}
 	send(m, press("down"), press("down"), press("j"))
-	if m.vp.YOffset != 3 {
-		t.Errorf("after 3 downs: offset %d, want 3", m.vp.YOffset)
+	if m.vp.YOffset() != 3 {
+		t.Errorf("after 3 downs: offset %d, want 3", m.vp.YOffset())
 	}
 	send(m, press("up"), press("k"))
-	if m.vp.YOffset != 1 {
-		t.Errorf("after 2 ups: offset %d, want 1", m.vp.YOffset)
+	if m.vp.YOffset() != 1 {
+		t.Errorf("after 2 ups: offset %d, want 1", m.vp.YOffset())
 	}
 	send(m, press("pgdown"))
-	if m.vp.YOffset <= 1 {
-		t.Errorf("pgdown did not move: %d", m.vp.YOffset)
+	if m.vp.YOffset() <= 1 {
+		t.Errorf("pgdown did not move: %d", m.vp.YOffset())
 	}
 	send(m, press("G"))
 	if !m.vp.AtBottom() {
@@ -131,8 +134,12 @@ func TestScrolling(t *testing.T) {
 		t.Error("g did not reach the top")
 	}
 	send(m, press("up"))
-	if m.vp.YOffset != 0 {
-		t.Errorf("scrolled above the top: %d", m.vp.YOffset)
+	if m.vp.YOffset() != 0 {
+		t.Errorf("scrolled above the top: %d", m.vp.YOffset())
+	}
+	send(m, press("space")) // v2 reports the space bar as "space", not " "
+	if m.vp.YOffset() <= 1 {
+		t.Errorf("space did not page down: %d", m.vp.YOffset())
 	}
 }
 
@@ -148,15 +155,15 @@ func TestResizeWhileScrolledDoesNotPanic(t *testing.T) {
 	if m.vp.TotalLineCount() >= tall {
 		t.Fatalf("test premise broken: table did not shrink (%d -> %d)", tall, m.vp.TotalLineCount())
 	}
-	if max := m.vp.TotalLineCount() - m.vp.Height; m.vp.YOffset > max {
-		t.Errorf("offset %d beyond max %d after resize", m.vp.YOffset, max)
+	if max := m.vp.TotalLineCount() - m.vp.Height(); m.vp.YOffset() > max {
+		t.Errorf("offset %d beyond max %d after resize", m.vp.YOffset(), max)
 	}
-	_ = m.View() // must not panic
+	_ = m.content() // must not panic
 
 	// and back again, and a bunch of random sizes
 	for _, s := range [][2]int{{30, 10}, {300, 60}, {5, 3}, {1, 1}, {0, 0}, {80, 24}} {
 		send(m, size(s[0], s[1]), press("G"), press("g"), press("pgdown"))
-		_ = m.View()
+		_ = m.content()
 	}
 }
 
@@ -164,14 +171,14 @@ func TestTinyAndZeroSizesDoNotPanic(t *testing.T) {
 	for _, s := range [][2]int{{0, 0}, {1, 1}, {2, 2}, {5, 1}, {19, 3}} {
 		m := newModel(t, 10)
 		send(m, size(s[0], s[1]))
-		_ = m.View()
+		_ = m.content()
 	}
 }
 
 func TestNoAliases(t *testing.T) {
 	m := newModel(t, 0)
 	send(m, size(80, 24), press("down"), press("G"))
-	_ = m.View() // header only, no panic
+	_ = m.content() // header only, no panic
 }
 
 func TestHostileContentIsNeutralised(t *testing.T) {
@@ -179,7 +186,7 @@ func TestHostileContentIsNeutralised(t *testing.T) {
 	as := []alias.Alias{{Name: "bad\x1b[2Jname", Command: "echo \x1b]0;title\x07 \x1b[31m"}}
 	m := New(as, highlight.New(shell.Bash), "x")
 	send(m, size(100, 20))
-	v := m.View()
+	v := m.content()
 	if strings.Contains(v, "\x1b[2J") || strings.Contains(v, "\x1b]0;") || strings.Contains(v, "\x07") {
 		t.Errorf("raw escape sequence reached the screen: %q", v)
 	}
@@ -194,7 +201,7 @@ func TestUnicodeFixtureLikeRows(t *testing.T) {
 	m := New(as, highlight.New(shell.Zsh), "x")
 	for _, w := range []int{120, 60, 30, 12} {
 		send(m, size(w, 30))
-		v := m.View()
+		v := m.content()
 		for i, line := range strings.Split(v, "\n") {
 			if lw := lipgloss.Width(line); lw > w && w >= minTableW {
 				t.Errorf("width %d: line %d is %d cells wide", w, i, lw)

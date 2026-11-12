@@ -6,11 +6,11 @@ package tui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/sharon-xa/pretty-alias/internal/alias"
 	"github.com/sharon-xa/pretty-alias/internal/highlight"
@@ -45,7 +45,7 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 	}
 
 	keys := newKeyMap()
-	vp := viewport.New(0, 0)
+	vp := viewport.New()
 	vp.KeyMap = keys.viewportKeys()
 	vp.MouseWheelEnabled = false // keep the mouse free for selecting/copying text
 
@@ -59,7 +59,7 @@ func New(aliases []alias.Alias, hl *highlight.Highlighter, source string) *Model
 
 // Run starts the program on the alternate screen and blocks until it exits.
 func Run(m *Model) error {
-	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
+	_, err := tea.NewProgram(m).Run()
 	return err
 }
 
@@ -73,7 +73,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resize(msg.Width, msg.Height)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
@@ -95,19 +95,26 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // valid (the table can get shorter when the window gets wider).
 func (m *Model) resize(w, h int) {
 	m.width, m.height = w, h
-	m.help.Width = w
-	m.vp.Width = w
-	m.vp.Height = max(h, 1)
+	m.help.SetWidth(w)
+	m.vp.SetWidth(w)
 	if m.showFooter() {
-		m.vp.Height = h - footerHeight
+		m.vp.SetHeight(h - footerHeight)
+	} else {
+		m.vp.SetHeight(max(h, 1))
 	}
 	m.vp.SetContent(renderTable(m.rows, m.nameW, w))
-	m.vp.SetYOffset(m.vp.YOffset) // clamps into range
+	m.vp.SetYOffset(m.vp.YOffset()) // clamps into range
 	m.ready = true
 }
 
-// View implements tea.Model.
-func (m *Model) View() string {
+// View implements tea.Model. The program runs on the alternate screen.
+func (m *Model) View() tea.View {
+	v := tea.NewView(m.content())
+	v.AltScreen = true
+	return v
+}
+
+func (m *Model) content() string {
 	if !m.ready {
 		return ""
 	}

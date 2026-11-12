@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/viewport"
 )
 
 // keyMap is the single source of truth for key bindings. The footer help and
@@ -25,7 +25,7 @@ func newKeyMap() keyMap {
 		Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
 		Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
 		PageUp:   key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup", "page up")),
-		PageDown: key.NewBinding(key.WithKeys("pgdown", "f", " "), key.WithHelp("pgdn", "page down")),
+		PageDown: key.NewBinding(key.WithKeys("pgdown", "f", "space"), key.WithHelp("pgdn", "page down")),
 		HalfUp:   key.NewBinding(key.WithKeys("ctrl+u"), key.WithHelp("ctrl+u", "half page up")),
 		HalfDown: key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "half page down")),
 		Top:      key.NewBinding(key.WithKeys("g", "home"), key.WithHelp("g", "top")),
