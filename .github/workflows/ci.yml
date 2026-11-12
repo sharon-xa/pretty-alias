@@ -1,9 +1,21 @@
 name: ci
 
+# Only run when something CI builds or tests changes. install.sh is covered by
+# install_test.go; testdata/ holds the fixtures the tests read.
 on:
   push:
     branches: [main]
+    paths: &go-paths
+      - "**.go"
+      - go.mod
+      - go.sum
+      - "testdata/**"
+      - "!**.md"
+      - install.sh
+      - .golangci.yml
+      - .github/workflows/ci.yml
   pull_request:
+    paths: *go-paths
 
 jobs:
   test:

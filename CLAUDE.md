@@ -45,6 +45,7 @@ A change is done only when **`just check` and `just smoke` both pass**. If eithe
 - **Bubble Tea v2** (`charm.land/*/v2`, not `github.com/charmbracelet/*`): `View()` returns `tea.View` (alt screen is `v.AltScreen = true`). Keys are `tea.KeyPressMsg`. The space bar's key string is `"space"`, not `" "`. Viewport and help size and offset go through methods (`SetWidth`, `YOffset()`, …).
 - **Colour detection**: `colorprofile.Detect` asks tmux for its real capabilities, so `TERM=...` overrides have no effect inside tmux. To test colour modes end to end, run under `env -i HOME=$HOME PATH=$PATH TERM=... COLORTERM=...`.
 - **Release asset contract**: `install.sh` expects `pretty-alias-<os>-<arch>` (linux/darwin × amd64/arm64) plus `checksums.txt` in `sha256sum` format. `just dist` produces exactly this. Don't rename assets without updating `install.sh` and `install_test.go`.
+- **CI is path-filtered** (`.github/workflows/ci.yml`): it runs only for Go files, `go.mod`/`go.sum`, `testdata/`, `install.sh`, `.golangci.yml` and the workflow itself, and never for `.md` files. If the build or tests start depending on another kind of file (e.g. `go:embed` assets), add it to the `paths` list.
 - The debug log (`PRETTY_ALIAS_DEBUG=1`) goes to the user cache dir, never the working directory. No `.env` files.
 
 ## Code style
