@@ -83,6 +83,7 @@ Requires [Go](https://go.dev/dl/) (version in `go.mod`) and, optionally, [`just`
 just            # list recipes
 just test       # go test ./...
 just check      # vet + lint + race tests + format check (what CI runs)
+just fmt        # format (gofumpt + golines, 100 columns)
 just smoke      # run every fixture through the real binary in a pty
 just try testdata/zshrc zsh    # open the TUI on a fixture, without touching your real config
 ```
